@@ -45,7 +45,7 @@ export function buildWhatsAppMessage(entry) {
   } = entry;
 
   const lines = [];
-  lines.push(`🚶🏻‍♂️*VSG GANDHINAGAR*🚶🏻`);
+  lines.push(`🚶🏻*VSG GANDHINAGAR*🚶🏻`);
   lines.push(`*🔢 Vihar No :-* ${viharNo}`);
   lines.push('');
   lines.push(`📅 *Date :* ${formatDate(date)}`);
