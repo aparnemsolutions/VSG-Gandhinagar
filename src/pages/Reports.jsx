@@ -112,7 +112,7 @@ export default function Reports() {
                             {m.total}
                           </td>
                           <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
-                            {m.km} KM
+                            {m.km}
                           </td>
                           <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
                             {m.sadhu}
