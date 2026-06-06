@@ -79,7 +79,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">
-      <header className="flex items-stretch justify-between bg-white shadow-sm border border-slate-100 overflow-hidden w-full">
+      {/*<header className="flex items-stretch justify-between bg-white shadow-sm border border-slate-100 overflow-hidden w-full">
         <div className="relative flex items-center gap-2 sm:gap-3 pl-3 sm:pl-4 pr-8 sm:pr-10 py-2 sm:py-2.5 flex-1 min-w-[175px] sm:min-w-[230px] flex-shrink-0">
           <div
             className="absolute inset-y-0 left-0 bg-[#C96800] w-[calc(60%+95px)] z-0"
@@ -129,7 +129,29 @@ export default function Dashboard() {
             </Link>
           )}
         </div>
-      </header>
+      </header>*/}
+
+      <header className="flex items-center gap-2.5 px-4 pt-4 pb-3 bg-[#C96800]">
+        <img src={logo} alt="VSG Logo" className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-orange-300" />
+        <div className="flex-1 min-w-0">
+          <h1 className="text-white font-black text-base leading-tight">Vihar Seva Group (VSG) Gandhinagar </h1>
+          <p className="text-orange-100 text-xs font-semibold truncate">Welcome, {fullName}</p>
+        </div> 
+
+      {/* Setting Icon Excel Sheet sync */}
+      {/* <button onClick={() => setShowSettings(true)} className="text-white p-2 rounded-xl hover:bg-orange-700" title="Settings">
+          <Settings size={18} />
+        </button> */}
+
+       <button onClick={syncAll} className="text-white p-2 rounded-xl hover:bg-orange-700" title="Sync">
+          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+        </button>
+        {PERMISSIONS.canAddEntry(role) && (
+          <Link to="/add" className="flex items-center gap-1 bg-white text-[#C96800] font-bold text-sm px-2 py-2 rounded-xl flex-shrink-0">
+            Add New Report
+          </Link>
+        )}
+      </header> 
 
       <div className="px-4 pt-4">
         <div className="grid grid-cols-2 gap-2 mb-4">
