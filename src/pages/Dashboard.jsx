@@ -373,7 +373,7 @@ export default function Dashboard() {
                 {yearlySevikaTop.length > 0 && (
                   <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-2">
                     <p className="font-black text-sm text-[#C96800] mb-3">Top 3 Vihar Sevika</p>
-                    <div className={yearlySevikaTop.length > 4 ? "overflow-y-auto max-h-[260px] space-y-2 pr-1" : "space-y-2"}>
+                    <div className="space-y-2">
                       {yearlySevikaTop.map((record) => (
                         <Medal key={record.name} rank={record.rank} name={record.name} count={record.count} color="#1B7A3A" />
                       ))}

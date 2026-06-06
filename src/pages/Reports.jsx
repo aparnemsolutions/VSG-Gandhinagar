@@ -160,13 +160,7 @@ export default function Reports() {
                 <p className="font-black text-sm text-[#C96800] mb-3">
                   Top 3 Vihar Sevika
                 </p>
-                <div
-                  className={
-                    sevikaTop.length > 4
-                      ? "overflow-y-auto max-h-[260px] space-y-2 pr-1"
-                      : "space-y-2"
-                  }
-                >
+                <div className="space-y-2">
                   {sevikaTop.map((r) => (
                     <Medal
                       key={r.name}

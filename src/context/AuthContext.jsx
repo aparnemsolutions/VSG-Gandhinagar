@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { getScriptUrl, PERMISSIONS, ROLES, HARDCODED_SESSION } from '../config/sheets';
+import { getScriptUrl, PERMISSIONS, ROLES } from '../config/sheets';
 import GoogleWriteModal from '../components/GoogleWriteModal';
 
 const AuthContext = createContext(null);
@@ -34,8 +34,11 @@ function decodeJwtPayload(idToken) {
 
 function isTokenValid(session) {
   if (!session) return false;
-  // If we have an internal long-lived session token, consider it valid locally
-  if (session.sessionToken) return true;
+  if (session.sessionToken) {
+    if (!session.expires) return true;
+    const expiresAtMs = Number(new Date(session.expires).getTime());
+    return Number.isFinite(expiresAtMs) && Date.now() < expiresAtMs;
+  }
   if (!session?.idToken) return false;
   const payload = decodeJwtPayload(session.idToken);
   if (!payload?.exp) return false;
@@ -47,14 +50,17 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => {
     const existing = readSession();
     if (existing && isTokenValid(existing)) return existing;
-    return HARDCODED_SESSION;
+    return { role: ROLES.USER, fullName: 'Guest', email: '', idToken: '', sessionToken: '', expires: '' };
   });
   const [googleModalOpen, setGoogleModalOpen] = useState(false);
   const [googleModalError, setGoogleModalError] = useState('');
   const pendingAuthRef = useRef(null);
   const gisInitializedRef = useRef(false);
 
-  const canWrite = useMemo(() => PERMISSIONS.canAddEntry(session.role), [session.role]);
+  const canWrite = useMemo(
+    () => isTokenValid(session) && PERMISSIONS.canAddEntry(session.role),
+    [session],
+  );
 
   const scriptApi = useCallback((params) => {
     const url = getScriptUrl();
@@ -89,6 +95,33 @@ export function AuthProvider({ children }) {
       });
   }, []);
 
+  useEffect(() => {
+    const stored = readSession();
+    if (!stored || !stored.sessionToken) return;
+    if (!isTokenValid(stored)) return;
+    const token = stored.sessionToken || stored.idToken;
+    if (!token) return;
+
+    scriptApi({ action: 'sessionInfo', sessionToken: token })
+      .then((res) => {
+        if (res?.success) {
+          const next = {
+            role: res.role || stored.role || ROLES.USER,
+            fullName: res.fullName || stored.fullName || res.email || 'User',
+            email: res.email || stored.email || '',
+            idToken: stored.idToken || '',
+            sessionToken: stored.sessionToken,
+            expires: stored.expires || '',
+          };
+          setSession(next);
+          writeSession(next);
+        }
+      })
+      .catch(() => {
+        // Keep the existing local session if the network check fails.
+      });
+  }, [scriptApi]);
+
   const handleGoogleCredential = useCallback(async (idToken) => {
     setGoogleModalError('');
     try {
@@ -100,6 +133,7 @@ export function AuthProvider({ children }) {
         email: res.email || '',
         idToken,
         sessionToken: res.sessionToken || '',
+        expires: res.expires || '',
       };
       setSession(next);
       writeSession(next);
@@ -138,7 +172,7 @@ export function AuthProvider({ children }) {
   }, [handleGoogleCredential]);
 
   const ensureWriteAccess = useCallback(() => {
-    if (canWrite && (session.sessionToken || session.idToken || session.role === ROLES.ADMIN)) {
+    if (canWrite) {
       return Promise.resolve(session);
     }
 

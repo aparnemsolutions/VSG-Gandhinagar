@@ -78,6 +78,7 @@ function doGet(e) {
     else if (action === 'getDirectory') result = getDirectoryRecords();
     else if (action === 'login')        result = login(e.parameter.username, e.parameter.password);
     else if (action === 'googleLogin')  result = googleLogin(tokenParam);
+    else if (action === 'sessionInfo')  result = sessionInfo(tokenParam);
     else if (action === 'newYear')      result = newYear(e.parameter.year, tokenParam);
     else if (action === 'ping')         result = { ok: true, at: new Date().toISOString() };
     else if (action === 'authorize')    result = authorize();
@@ -303,13 +304,25 @@ function newYear(year, idToken) {
 function googleLogin(idToken) {
   // Validate Google token and create a long-lived session token
   const actor = getActorFromToken_(idToken);
-  const sessionToken = createSessionForEmail_(actor.email);
+  const { token: sessionToken, expires } = createSessionForEmail_(actor.email);
   return {
     success: true,
     email: actor.email,
     role: actor.role,
     fullName: actor.fullName || actor.email,
     sessionToken,
+    expires,
+  };
+}
+
+function sessionInfo(token) {
+  if (!token) throw new Error('Missing sessionToken');
+  const actor = getActorFromToken_(token);
+  return {
+    success: true,
+    email: actor.email,
+    role: actor.role,
+    fullName: actor.fullName || actor.email,
   };
 }
 
@@ -358,7 +371,7 @@ function createSessionForEmail_(email) {
   const expires = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString(); // 10 years
   const created = new Date().toISOString();
   sheet.appendRow([token, String(email), expires, created]);
-  return token;
+  return { token, expires };
 }
 
 function getUserBySessionToken_(token) {
