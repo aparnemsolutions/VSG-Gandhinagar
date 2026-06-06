@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { useSheets } from "../hooks/useSheets";
-import { calcYearlyStats, topN } from "../utils/reportHelpers";
+import { calcYearlyStats } from "../utils/reportHelpers";
 import Medal from "../components/Medal";
 import { RefreshCw } from "lucide-react";
 import sadhviji from "../assets/SadhvijiMs.png";
@@ -10,6 +11,9 @@ import number from "../assets/TotalVihar.png";
 
 export default function Reports() {
   const { entries, config, loading, syncAll } = useSheets();
+  const { session, ensureWriteAccess } = useAuth();
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
 
   useEffect(() => {
     syncAll();
@@ -20,6 +24,19 @@ export default function Reports() {
   const yearly = calcYearlyStats(entries);
   const sevakTop = topRanks(withDenseRanks(yearly.sevakRanking), 3);
   const sevikaTop = topRanks(withDenseRanks(yearly.sevikaRanking), 3);
+  const isLoggedIn = Boolean(session?.sessionToken || session?.idToken);
+
+  async function handleReportsLogin() {
+    setLoginError('');
+    setLoginLoading(true);
+    try {
+      await ensureWriteAccess();
+    } catch (error) {
+      setLoginError(error?.message || 'Login failed');
+    } finally {
+      setLoginLoading(false);
+    }
+  }
 
   return (
     <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">
@@ -130,47 +147,76 @@ export default function Reports() {
 
             {/* Top 5 Sevak */}
             {sevakTop.length > 0 && (
-              <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-2">
+              <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-3">
                 <p className="font-black text-sm text-[#C96800] mb-3">
                   Top 3 Vihar Sevak
                 </p>
-                {sevakTop.map((r) => (
-                  <Medal
-                    key={r.name}
-                    rank={r.rank}
-                    name={r.name}
-                    count={r.count}
-                    color="#1B7A3A"
-                  />
-                ))}
+                {isLoggedIn ? (
+                  <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                    {sevakTop.map((r) => (
+                      <Medal
+                        key={r.name}
+                        rank={r.rank}
+                        name={r.name}
+                        count={r.count}
+                        color="#1B7A3A"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-[#F5E5B0] bg-[#FFF7E2] p-4 text-center">
+                    <p className="text-sm text-[#8B6525] mb-3">
+                      Login to view Top 3 Vihar Sevak rankings.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleReportsLogin}
+                      className="inline-flex items-center justify-center rounded-xl bg-[#C96800] px-4 py-2 text-white font-bold hover:bg-[#a85000]"
+                    >
+                      {loginLoading ? 'Signing in...' : 'Login with Google'}
+                    </button>
+                    {loginError && (
+                      <p className="mt-2 text-xs text-red-600">{loginError}</p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Top 5 Sevika */}
-            {/* {sevikaTop.length > 0 && (
-              <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-2">
-                <p className="font-black text-sm text-[#C96800] mb-3">Top 3 Vihar Sevika</p>
-                {sevikaTop.map((r) => (
-                  <Medal key={r.name} rank={r.rank} name={r.name} count={r.count} color="#1B7A3A" />
-                ))}
-              </div>
-            )} */}
             {sevikaTop.length > 0 && (
-              <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-2">
+              <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-3">
                 <p className="font-black text-sm text-[#C96800] mb-3">
                   Top 3 Vihar Sevika
                 </p>
-                <div className="space-y-2">
-                  {sevikaTop.map((r) => (
-                    <Medal
-                      key={r.name}
-                      rank={r.rank}
-                      name={r.name}
-                      count={r.count}
-                      color="#1B7A3A"
-                    />
-                  ))}
-                </div>
+                {isLoggedIn ? (
+                  <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                    {sevikaTop.map((r) => (
+                      <Medal
+                        key={r.name}
+                        rank={r.rank}
+                        name={r.name}
+                        count={r.count}
+                        color="#1B7A3A"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-[#F5E5B0] bg-[#FFF7E2] p-4 text-center">
+                    <p className="text-sm text-[#8B6525] mb-3">
+                      Login to view Top 3 Vihar Sevika rankings.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleReportsLogin}
+                      className="inline-flex items-center justify-center rounded-xl bg-[#C96800] px-4 py-2 text-white font-bold hover:bg-[#a85000]"
+                    >
+                      {loginLoading ? 'Signing in...' : 'Login with Google'}
+                    </button>
+                    {loginError && (
+                      <p className="mt-2 text-xs text-red-600">{loginError}</p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </>

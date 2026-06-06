@@ -4,6 +4,23 @@ import { useSheets } from "../hooks/useSheets";
 import { useNavigate } from 'react-router-dom';
 import { fetchDirectoryRecords } from '../utils/directoryLoader';
 
+const DIRECTORY_PROFILE_KEYS = [
+  'Email Id',
+  'First Name',
+  'Middle Name',
+  'Last Name',
+  'Gender',
+  'Blood Group',
+  'Contact Number',
+  'Address',
+  'Area',
+  'City',
+  'Work Type',
+  'Company / Business Name',
+  'Occupation / Profession',
+  'Office Location / Business Area',
+];
+
 export default function ViharDirectory() {
   const { entries, config, loading, syncAll } = useSheets();
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,7 +41,16 @@ export default function ViharDirectory() {
     setFetchError("");
     try {
       const records = await fetchDirectoryRecords();
-      setPeople(records);
+      const filtered = records.map((record) => {
+        const normalized = { _rowIndex: record._rowIndex };
+        DIRECTORY_PROFILE_KEYS.forEach((key) => {
+          if (Object.prototype.hasOwnProperty.call(record, key) && String(record[key] ?? '').trim() !== '') {
+            normalized[key] = record[key];
+          }
+        });
+        return normalized;
+      });
+      setPeople(filtered);
     } catch (error) {
       setFetchError(error instanceof Error ? error.message : "Failed to load directory.");
       setPeople([]);
@@ -46,7 +72,7 @@ export default function ViharDirectory() {
     const middle = String(person['Middle Name'] || person.MiddleName || "").trim();
     const last = String(person['Last Name'] || person.LastName || "").trim();
     const full = [first, middle, last].filter(Boolean).join(" ");
-    return full || "";
+    return full || String(person['Email Id'] || person.email || "").trim();
   }
 
   function getPersonRole(person) {

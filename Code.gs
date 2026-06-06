@@ -239,16 +239,40 @@ function getDirectoryRecords() {
   const rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
 
-  const headers = rows[0].map((h) => String(h || '').trim());
-  return rows.slice(1)
-    .filter((row) => row.some((cell) => String(cell || '').trim()))
+  const headerRowIndex = rows.length >= 4 ? 3 : 0;
+  const headers = rows[headerRowIndex].map((h) => String(h || '').trim());
+  const allowedHeaders = new Set([
+    'Email Id',
+    'First Name',
+    'Middle Name',
+    'Last Name',
+    'Gender',
+    'Blood Group',
+    'Contact Number',
+    'Address',
+    'Area',
+    'City',
+    'Work Type',
+    'Company / Business Name',
+    'Occupation / Profession',
+    'Office Location / Business Area',
+  ]);
+
+  return rows.slice(headerRowIndex + 1)
+    .filter((row) => row.some((cell, colIndex) => {
+      const header = headers[colIndex];
+      return header && allowedHeaders.has(header) && String(cell || '').trim();
+    }))
     .map((row, index) => {
       const record = {};
       headers.forEach((header, colIndex) => {
-        if (!header) return;
-        record[header] = row[colIndex] == null ? '' : row[colIndex];
+        if (!header || !allowedHeaders.has(header)) return;
+        const value = row[colIndex] == null ? '' : row[colIndex];
+        if (String(value).trim() !== '') {
+          record[header] = value;
+        }
       });
-      record._rowIndex = index + 2;
+      record._rowIndex = headerRowIndex + 2 + index;
       return record;
     });
 }

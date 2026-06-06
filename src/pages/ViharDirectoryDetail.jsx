@@ -3,6 +3,23 @@ import { ArrowLeft } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchDirectoryRecords } from '../utils/directoryLoader';
 
+const DIRECTORY_PROFILE_KEYS = [
+  'Email Id',
+  'First Name',
+  'Middle Name',
+  'Last Name',
+  'Gender',
+  'Blood Group',
+  'Contact Number',
+  'Address',
+  'Area',
+  'City',
+  'Work Type',
+  'Company / Business Name',
+  'Occupation / Profession',
+  'Office Location / Business Area',
+];
+
 function getPersonName(person) {
   if (!person) return '';
   const direct = String(person['Name'] || person.Name || person['Full Name'] || '').trim();
@@ -49,35 +66,15 @@ export default function ViharDirectoryDetail() {
 
   const name = getPersonName(person) || person['Email Id'] || 'Unknown';
 
-  // Preferred display order based on your sheet headers
-  const preferred = [
-    'Sr No.',
-    'Email Id',
-    'First Name',
-    'Middle Name',
-    'Last Name',
-    'Gender',
-    'Blood Group',
-    'Contact Number',
-    'Address',
-    'Area',
-    'City',
-    'Work Type',
-    'Company / Business Name',
-    'Occupation / Profession',
-    'Office Location / Business Area',
-  ];
-
-  const ignoredKeys = new Set(['Column 1', '_rowIndex']);
+  const preferred = DIRECTORY_PROFILE_KEYS;
+  const ignoredKeys = new Set(['Column 1', '_rowIndex', 'Sr No.', 'Sr no', 'Sr No']);
 
   const keys = [];
-  // Add preferred keys in order when present
   preferred.forEach((k) => {
     if (Object.prototype.hasOwnProperty.call(person, k) && String(person[k] ?? '').trim() !== '') {
       keys.push(k);
     }
   });
-  // Add any other keys that are not ignored and not already added
   Object.keys(person).forEach((k) => {
     if (ignoredKeys.has(k)) return;
     if (preferred.includes(k)) return;
