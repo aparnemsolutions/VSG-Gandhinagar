@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { getScriptUrl, PERMISSIONS, ROLES } from '../config/sheets';
+import { getScriptUrl, GOOGLE_CLIENT_ID_FALLBACK, PERMISSIONS, ROLES } from '../config/sheets';
 import GoogleWriteModal from '../components/GoogleWriteModal';
 
 const AuthContext = createContext(null);
@@ -154,7 +154,7 @@ export function AuthProvider({ children }) {
   const initGoogleIdentity_ = useCallback(() => {
     if (gisInitializedRef.current) return true;
 
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID_FALLBACK;
     if (!clientId) return false;
 
     const googleId = typeof window !== 'undefined' ? window.google?.accounts?.id : null;
@@ -180,7 +180,7 @@ export function AuthProvider({ children }) {
       return Promise.resolve(session);
     }
 
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID_FALLBACK;
     if (!clientId) return Promise.reject(new Error('Missing VITE_GOOGLE_CLIENT_ID'));
 
     setGoogleModalError('');
@@ -229,7 +229,7 @@ export function AuthProvider({ children }) {
       {children}
       <GoogleWriteModal
         open={googleModalOpen}
-        clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
+        clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID_FALLBACK}
         error={googleModalError}
         onClose={cancelEnsureWriteAccess}
         onInit={initGoogleIdentity_}

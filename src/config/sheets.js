@@ -12,6 +12,8 @@ const SCRIPT_URL_KEY = 'vsg-script-url';
 export const getScriptUrl = () => SCRIPT_URL || localStorage.getItem(SCRIPT_URL_KEY) || '';
 export const setScriptUrl = (url) => localStorage.setItem(SCRIPT_URL_KEY, url);
 
+export const GOOGLE_CLIENT_ID_FALLBACK = '59223363231-s3q8p0b9flkpuhd4r1qbedbh4c8gu3e2.apps.googleusercontent.com';
+
 export const ROLES = {
   ADMIN: 'admin',
   CAPTAIN: 'captain',
