@@ -77,10 +77,6 @@ export default function Dashboard() {
     }
   }, [forceOpenRankings, hasSevakVisible, hasSevikaVisible, openRankingPanel]);
 
-  function handleSaveUrl(url) {
-    saveScriptUrl(url);
-  }
-
   return (
     <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">
       {/*<header className="flex items-stretch justify-between bg-white shadow-sm border border-slate-100 overflow-hidden w-full">
@@ -150,11 +146,9 @@ export default function Dashboard() {
        <button onClick={syncAll} className="text-white p-2 rounded-xl hover:bg-orange-700" title="Sync">
           <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
         </button>
-        {PERMISSIONS.canAddEntry(role) && (
-          <Link to="/add" className="flex items-center gap-1 bg-white text-[#C96800] font-bold text-sm px-2 py-2 rounded-xl flex-shrink-0">
-            Add New Report
-          </Link>
-        )}
+        <Link to="/add" className="flex items-center gap-1 bg-white text-[#C96800] font-bold text-sm px-2 py-2 rounded-xl flex-shrink-0">
+          Add New Report
+        </Link>
       </header> 
 
       <div className="px-4 pt-4">
@@ -377,7 +371,7 @@ export default function Dashboard() {
                 {yearlySevikaTop.length > 0 && (
                   <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-2">
                     <p className="font-black text-sm text-[#C96800] mb-3">Top 3 Vihar Sevika</p>
-                    <div className={yearlySevikaTop.length > 4 ? "overflow-y-auto max-h-[260px] space-y-2 pr-1" : "space-y-2"}>
+                    <div className="space-y-2">
                       {yearlySevikaTop.map((record) => (
                         <Medal key={record.name} rank={record.rank} name={record.name} count={record.count} color="#1B7A3A" />
                       ))}
@@ -389,14 +383,6 @@ export default function Dashboard() {
           </>
         )}
       </div>
-
-      {showSettings && (
-        <SettingsModal
-          currentUrl={scriptUrl}
-          onSave={handleSaveUrl}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
     </div>
   );
 }

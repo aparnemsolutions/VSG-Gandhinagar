@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { DIRECTORY_SHEET_ID, DIRECTORY_SHEET_NAME } from '../config/directory';
 import { fetchDirectoryRecords } from '../utils/directoryLoader';
 
 function getPersonName(person) {
@@ -27,7 +26,7 @@ export default function ViharDirectoryDetail() {
       setLoading(true);
       setError('');
       try {
-        const records = await fetchDirectoryRecords(DIRECTORY_SHEET_ID, DIRECTORY_SHEET_NAME);
+        const records = await fetchDirectoryRecords();
         const rowIndex = Number(row);
         const found = records.find((r) => Number(r._rowIndex) === rowIndex) || records[rowIndex - 1] || null;
         if (mounted) setPerson(found);

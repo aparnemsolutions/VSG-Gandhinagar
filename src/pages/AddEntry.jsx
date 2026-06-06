@@ -109,7 +109,7 @@ export default function AddEntry() {
   const navigate = useNavigate();
   const location = useLocation();
   const { entries, config, saveEntry, nextViharNo, syncConfig, syncEntries } = useSheets();
-  const { session } = useAuth();
+  const { session, ensureWriteAccess } = useAuth();
 
   const editEntry = location.state?.entry || null;
 
@@ -142,6 +142,18 @@ export default function AddEntry() {
     syncConfig();
     syncEntries();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    ensureWriteAccess().catch(() => {
+      if (cancelled) return;
+      // If auth is cancelled or fails, take the user back to a safe landing route.
+      navigate("/", { replace: true });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ensureWriteAccess, navigate]);
 
   const places = config?.places || [];
   const sevakNames = config?.sevakNames || [];
@@ -284,7 +296,10 @@ export default function AddEntry() {
     <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">
       <header className="flex items-center gap-3 px-4 pt-4 pb-3 bg-[#C96800]">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            if (window.history.length > 1) navigate(-1);
+            else navigate("/", { replace: true });
+          }}
           className="text-white p-1.5 rounded-xl hover:bg-orange-700"
         >
           <ChevronLeft size={22} />

@@ -55,7 +55,7 @@ export default function EntryConfirm() {
             to="/add"
             className="flex items-center justify-center gap-2 bg-[#C96800] text-white font-bold rounded-xl py-3 text-sm"
           >
-            <Plus size={16} /> Add Another
+            <Plus size={16} /> Add New Entry
           </Link>
         </div>
       </div>

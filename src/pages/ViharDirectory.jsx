@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { BookOpen, Phone, Search, X } from "lucide-react";
 import { useSheets } from "../hooks/useSheets";
 import { useNavigate } from 'react-router-dom';
-import { DIRECTORY_SHEET_ID, DIRECTORY_SHEET_NAME } from "../config/directory";
 import { fetchDirectoryRecords } from '../utils/directoryLoader';
 
 export default function ViharDirectory() {
@@ -21,16 +20,10 @@ export default function ViharDirectory() {
   const navigate = useNavigate();
 
   async function loadDirectory() {
-    if (!DIRECTORY_SHEET_ID) {
-      setFetchError("");
-      setPeople([]);
-      return;
-    }
-
     setFetchingDirectory(true);
     setFetchError("");
     try {
-      const records = await fetchDirectoryRecords(DIRECTORY_SHEET_ID, DIRECTORY_SHEET_NAME);
+      const records = await fetchDirectoryRecords();
       setPeople(records);
     } catch (error) {
       setFetchError(error instanceof Error ? error.message : "Failed to load directory.");
@@ -177,8 +170,6 @@ export default function ViharDirectory() {
     ];
   }
 
-  const isDirectoryConfigured = Boolean(DIRECTORY_SHEET_ID);
-
   return (
     <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">
       <header className="px-4 pt-4 pb-3 bg-[#C96800] flex items-center gap-3">
@@ -233,31 +224,6 @@ export default function ViharDirectory() {
       </header>
 
       <div className="scroll-area px-4 pt-5 pb-28 space-y-4">
-        <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4">
-          <p className="text-sm font-black text-[#3D1F00]">Search and select a Vihar Sevak or Sevika</p>
-          <p className="text-xs text-[#8B6525] mt-2">
-            Tap a name to see their {yearLabel} vihar entries and contact details.
-          </p>
-        </div>
-
-        <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4">
-          {isDirectoryConfigured ? (
-            <p className="text-sm text-[#3D1F00]">
-              Directory source: separate Google Sheet. Refresh will reload the directory and app config.
-            </p>
-          ) : (
-            <p className="text-sm text-[#B71C1C]">
-              Directory not configured. Set <code>DIRECTORY_SHEET_ID</code> in <code>src/config/directory.js</code>.
-            </p>
-          )}
-          {fetchError && (
-            <p className="text-xs text-[#B71C1C] mt-2">{fetchError}</p>
-          )}
-          {fetchingDirectory && (
-            <p className="text-xs text-[#8B6525] mt-2">Loading directory data…</p>
-          )}
-        </div>
-
         <div className="bg-white border border-[#F5E5B0] rounded-2xl overflow-hidden">
           <div className="bg-[#FFFDF5] border-b border-[#F5E5B0] px-4 py-3">
             <p className="font-black text-sm text-[#C96800]">{filteredPeople.length} people</p>
