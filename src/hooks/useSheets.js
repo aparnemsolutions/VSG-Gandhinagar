@@ -10,7 +10,7 @@ function getIdToken() {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return '';
     const s = JSON.parse(raw);
-    return s?.idToken || '';
+    return s?.sessionToken || s?.idToken || '';
   } catch {
     return '';
   }
@@ -102,7 +102,7 @@ export function useSheets() {
   }, [scriptUrl]);
 
   const saveEntry = useCallback(async (entry) => {
-    const data = await api({ action: 'save', data: JSON.stringify(entry), idToken: getIdToken() });
+    const data = await api({ action: 'save', data: JSON.stringify(entry), sessionToken: getIdToken() });
     if (data?.error) throw new Error(data.error);
     const canonical = data?.viharNo ? { ...entry, viharNo: data.viharNo } : entry;
     // Update local cache directly — avoids a second getAll round-trip after every save
@@ -118,7 +118,7 @@ export function useSheets() {
   }, []);
 
   const deleteEntry = useCallback(async (id) => {
-    await api({ action: 'delete', id, idToken: getIdToken() });
+    await api({ action: 'delete', id, sessionToken: getIdToken() });
     await syncEntries();
   }, [syncEntries]);
 

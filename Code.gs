@@ -22,6 +22,7 @@ const SHEETS = {
   USERS:     'Users',
   CONTACTS:  'Important Contacts',
   CONFIG:    'App Config',
+  SESSIONS:  'Sessions',
 };
 
 const ROLES = {
@@ -66,15 +67,16 @@ function doGet(e) {
   e = e || { parameter: {} };
   const action = e.parameter.action;
   let result;
+  const tokenParam = e.parameter.sessionToken || e.parameter.idToken;
 
   try {
     if      (action === 'getAll')    result = getAll();
-    else if (action === 'save')      result = saveEntry(e.parameter.data, e.parameter.idToken);
-    else if (action === 'delete')    result = deleteEntry(e.parameter.id, e.parameter.idToken);
+    else if (action === 'save')      result = saveEntry(e.parameter.data, tokenParam);
+    else if (action === 'delete')    result = deleteEntry(e.parameter.id, tokenParam);
     else if (action === 'getConfig') result = getConfig();
     else if (action === 'login')     result = login(e.parameter.username, e.parameter.password);
-    else if (action === 'googleLogin') result = googleLogin(e.parameter.idToken);
-    else if (action === 'newYear')   result = newYear(e.parameter.year, e.parameter.idToken);
+    else if (action === 'googleLogin') result = googleLogin(tokenParam);
+    else if (action === 'newYear')   result = newYear(e.parameter.year, tokenParam);
     else if (action === 'ping')      result = { ok: true, at: new Date().toISOString() };
     else if (action === 'authorize') result = authorize();
     else                             result = { error: 'Unknown action: ' + action };
@@ -274,31 +276,89 @@ function newYear(year, idToken) {
 // ── Google Auth (write gate) ──────────────────────────────────────────────────
 
 function googleLogin(idToken) {
-  const actor = requireWriteAccess_(idToken);
+  // Validate Google token and create a long-lived session token
+  const actor = getActorFromToken_(idToken);
+  const sessionToken = createSessionForEmail_(actor.email);
   return {
     success: true,
     email: actor.email,
     role: actor.role,
     fullName: actor.fullName || actor.email,
+    sessionToken,
   };
 }
 
 function requireWriteAccess_(idToken) {
-  const actor = getActorFromGoogle_(idToken);
+  const actor = getActorFromToken_(idToken);
   if (!PERMISSIONS.canWrite(actor.role)) throw new Error('Not authorized');
   return actor;
 }
 
 function requireDeleteAccess_(idToken) {
-  const actor = getActorFromGoogle_(idToken);
+  const actor = getActorFromToken_(idToken);
   if (!PERMISSIONS.canDelete(actor.role)) throw new Error('Not authorized');
   return actor;
 }
 
 function requireNewYearAccess_(idToken) {
-  const actor = getActorFromGoogle_(idToken);
+  const actor = getActorFromToken_(idToken);
   if (!PERMISSIONS.canNewYear(actor.role)) throw new Error('Not authorized');
   return actor;
+}
+
+// Support either a Google id_token OR an internal session token.
+function getActorFromToken_(token) {
+  if (!token) throw new Error('Missing idToken or sessionToken');
+
+  // Session tokens created by this app are prefixed with 'sess_'
+  if (String(token).startsWith('sess_')) {
+    const actor = getUserBySessionToken_(token);
+    if (!actor) throw new Error('Invalid or expired session token');
+    return actor;
+  }
+
+  // Otherwise treat as Google ID token
+  return getActorFromGoogle_(token);
+}
+
+function createSessionForEmail_(email) {
+  const sheetName = SHEETS.SESSIONS;
+  let sheet = SS.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = SS.insertSheet(sheetName);
+    sheet.appendRow(['Token', 'Email', 'Expires', 'CreatedAt']);
+  }
+
+  const token = 'sess_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const expires = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString(); // 10 years
+  const created = new Date().toISOString();
+  sheet.appendRow([token, String(email), expires, created]);
+  return token;
+}
+
+function getUserBySessionToken_(token) {
+  const sheet = SS.getSheetByName(SHEETS.SESSIONS);
+  if (!sheet) return null;
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return null;
+  const headers = rows[0];
+  const tCol = headers.indexOf('Token');
+  const eCol = headers.indexOf('Email');
+  const xCol = headers.indexOf('Expires');
+  if (tCol === -1 || eCol === -1 || xCol === -1) return null;
+
+  const now = new Date();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][tCol] === token) {
+      const exp = rows[i][xCol];
+      if (exp && new Date(exp) > now) {
+        const email = String(rows[i][eCol] || '').trim();
+        return getUserByEmail_(email);
+      }
+      return null;
+    }
+  }
+  return null;
 }
 
 function getActorFromGoogle_(idToken) {

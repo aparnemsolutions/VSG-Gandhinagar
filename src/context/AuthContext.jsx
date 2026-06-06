@@ -33,6 +33,9 @@ function decodeJwtPayload(idToken) {
 }
 
 function isTokenValid(session) {
+  if (!session) return false;
+  // If we have an internal long-lived session token, consider it valid locally
+  if (session.sessionToken) return true;
   if (!session?.idToken) return false;
   const payload = decodeJwtPayload(session.idToken);
   if (!payload?.exp) return false;
@@ -91,12 +94,12 @@ export function AuthProvider({ children }) {
     try {
       const res = await scriptApi({ action: 'googleLogin', idToken });
       if (!res?.success) throw new Error(res?.error || 'Google auth failed');
-
       const next = {
         role: res.role || ROLES.USER,
         fullName: res.fullName || res.email || 'User',
         email: res.email || '',
         idToken,
+        sessionToken: res.sessionToken || '',
       };
       setSession(next);
       writeSession(next);
