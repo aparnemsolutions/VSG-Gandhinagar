@@ -37,6 +37,7 @@ export default function Dashboard() {
   const yearly = calcYearlyStats(entries);
   const yearlySevakTop = topN(withDenseRanks(yearly.sevakRanking), 3);
   const yearlySevikaTop = topN(withDenseRanks(yearly.sevikaRanking), 3);
+  const previousMonths = yearly.months.filter((month) => month.key !== currentMonthKey);
 
   const hasSevakRanking = stats.sevakRanking.length > 0;
   const hasSevikaRanking = stats.sevikaRanking.length > 0;
@@ -134,8 +135,8 @@ export default function Dashboard() {
       <header className="flex items-center gap-2.5 px-4 pt-4 pb-3 bg-[#C96800]">
         <img src={logo} alt="VSG Logo" className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-orange-300" />
         <div className="flex-1 min-w-0">
-          <h1 className="text-white font-black text-base leading-tight">Vihar Seva Group (VSG) Gandhinagar </h1>
-          <p className="text-orange-100 text-xs font-semibold truncate">Welcome, {fullName}</p>
+          <h1 className="text-white font-black text-sm md:text-base leading-tight">Vihar Seva Group (VSG) Gandhinagar</h1>
+          <p className="text-orange-100 text-[11px] font-semibold truncate">Welcome, {fullName}</p>
         </div> 
 
       {/* Setting Icon Excel Sheet sync */}
@@ -164,7 +165,7 @@ export default function Dashboard() {
                   : 'bg-white text-[#8B6525] border-[#E8C97A] hover:bg-[#FFF3D5]'
               }`}
             >
-              {view === 'month' ? 'This Month' : 'Annual Report'}
+              {view === 'month' ? 'Monthly Report' : 'Annual Report'}
             </button>
           ))}
         </div>
@@ -207,90 +208,40 @@ export default function Dashboard() {
 
         {activeView === 'month' ? (
           <>
-            {(hasSevakRanking || hasSevikaRanking) && (
-              <div className="bg-white border border-[#F5E5B0] rounded-2xl px-4 py-3">
-                <div className="flex items-center gap-2 bg-[#FFFDF5] border border-[#F5E5B0] rounded-xl px-3 py-2">
-                  <Search size={16} className="text-[#8B6525] flex-shrink-0" />
-                  <input
-                    value={rankingSearch}
-                    onChange={(e) => setRankingSearch(e.target.value)}
-                    placeholder="Search Vihar Sevak / Sevika"
-                    className="w-full bg-transparent outline-none text-sm font-semibold text-[#3D1F00] placeholder:text-[#8B6525]"
-                  />
-                  {rankingSearch.trim() && (
-                    <button
-                      type="button"
-                      onClick={() => setRankingSearch("")}
-                      className="p-1 rounded-lg hover:bg-[#FFF3D6] text-[#8B6525] flex-shrink-0"
-                      aria-label="Clear search"
-                      title="Clear"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
+            {previousMonths.length > 0 ? (
+              <div className="bg-white border border-[#F5E5B0] rounded-2xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-[#F5E5B0] bg-[#FFFDF5]">
+                  <p className="font-black text-sm text-[#3D1F00]">Month-Wise Report</p>
                 </div>
-                {rankingQuery && !hasSevakVisible && !hasSevikaVisible && (
-                  <div className="pt-2 text-xs font-semibold text-[#8B6525]">
-                    No matching Sevak/Sevika found.
-                  </div>
-                )}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-[#FFF3D6]">
+                        <th className="text-left px-5 py-2 font-black text-[#8B6525] text-center">Month</th>
+                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Vihar</th>
+                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Distance (KM)</th>
+                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Sadhu Bhagvant</th>
+                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Sadhviji Bhagvant</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previousMonths.map((month) => (
+                        <tr key={month.key} className="border-t border-[#F5E5B0]">
+                          <td className="px-3 py-2.5 font-semibold font-bold text-[#C96800] whitespace-nowrap">{month.label}</td>
+                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.total}</td>
+                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.km} KM</td>
+                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.sadhu}</td>
+                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.sadhviji}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            )}
-
-            {hasSevakRanking && (
-              <Section
-                title="Vihar Sevak"
-                color="#C96800"
-                collapsible={!forceOpenRankings}
-                isOpen={forceOpenRankings || openRankingPanel === "sevak"}
-                onToggle={() =>
-                  setOpenRankingPanel((prev) => (prev === "sevak" ? null : "sevak"))
-                }
-              >
-                {rankingQuery && !hasSevakVisible ? (
-                  <div className="py-3 text-xs font-semibold text-[#8B6525]">
-                    No matching Sevak found.
-                  </div>
-                ) : (
-                  sevakList.map((item, index) => (
-                    <RankRow
-                      key={item.name}
-                      rank={index + 1}
-                      name={item.name}
-                      count={item.count}
-                      color="#C96800"
-                    />
-                  ))
-                )}
-              </Section>
-            )}
-
-            {hasSevikaRanking && (
-              <Section
-                title="Vihar Sevika"
-                color="#C96800"
-                collapsible={!forceOpenRankings}
-                isOpen={forceOpenRankings || openRankingPanel === "sevika"}
-                onToggle={() =>
-                  setOpenRankingPanel((prev) => (prev === "sevika" ? null : "sevika"))
-                }
-              >
-                {rankingQuery && !hasSevikaVisible ? (
-                  <div className="py-3 text-xs font-semibold text-[#8B6525]">
-                    No matching Sevika found.
-                  </div>
-                ) : (
-                  sevikaList.map((item, index) => (
-                    <RankRow
-                      key={item.name}
-                      rank={index + 1}
-                      name={item.name}
-                      count={item.count}
-                      color="#C96800"
-                    />
-                  ))
-                )}
-              </Section>
+            ) : (
+              <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 text-[#8B6525] text-sm">
+                Previous month totals will appear here once the next month begins.
+              </div>
             )}
 
             {currentMonthEntries.length === 0 && !loading && (
@@ -327,38 +278,6 @@ export default function Dashboard() {
               </div>
             ) : (
               <>
-                {yearly.months.length > 0 && (
-                  <div className="bg-white border border-[#F5E5B0] rounded-2xl overflow-hidden">
-                    <div className="px-4 py-3 border-b border-[#F5E5B0] bg-[#FFFDF5]">
-                      <p className="font-black text-sm text-[#3D1F00]">Month-Wise Report</p>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="bg-[#FFF3D6]">
-                            <th className="text-left px-5 py-2 font-black text-[#8B6525] text-center">Month</th>
-                            <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Vihar</th>
-                            <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Distance (KM)</th>
-                            <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Sadhu Bhagvant</th>
-                            <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Sadhviji Bhagvant</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {yearly.months.map((month) => (
-                            <tr key={month.key} className="border-t border-[#F5E5B0]">
-                              <td className="px-3 py-2.5 font-semibold font-bold text-[#C96800] whitespace-nowrap">{month.label}</td>
-                              <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.total}</td>
-                              <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.km} KM</td>
-                              <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.sadhu}</td>
-                              <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.sadhviji}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
                 {yearlySevakTop.length > 0 && (
                   <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-2">
                     <p className="font-black text-sm text-[#C96800] mb-3">Top 3 Vihar Sevak</p>

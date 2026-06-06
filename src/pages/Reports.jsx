@@ -91,59 +91,6 @@ export default function Reports() {
             </div>
 
             {/* Month-wise breakdown */}
-            {yearly.months.length > 0 && (
-              <div className="bg-white border border-[#F5E5B0] rounded-2xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-[#F5E5B0] bg-[#FFFDF5]">
-                  <p className="font-black text-sm text-[#3D1F00]">
-                    Month-Wise Report
-                  </p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-[#FFF3D6]">
-                        <th className="text-left px-5 py-2 font-black text-[#8B6525] text-center">
-                          Month
-                        </th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
-                          Total Vihar
-                        </th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
-                          Total Distance (KM)
-                        </th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
-                          Total Sadhu Bhagvant
-                        </th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
-                          Total Sadhviji Bhagvant
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {yearly.months.map((m) => (
-                        <tr key={m.key} className="border-t border-[#F5E5B0]">
-                          <td className="px-3 py-2.5 font-semibold font-bold text-[#C96800] whitespace-nowrap">
-                            {m.label}
-                          </td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
-                            {m.total}
-                          </td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
-                            {m.km}
-                          </td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
-                            {m.sadhu}
-                          </td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
-                            {m.sadhviji}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
 
             {/* Top 5 Sevak */}
             {sevakTop.length > 0 && (
