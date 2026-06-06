@@ -49,7 +49,7 @@ export default function EntryConfirm() {
             to="/entries"
             className="flex items-center justify-center gap-2 border border-[#C96800] text-[#C96800] font-bold rounded-xl py-3 text-sm"
           >
-            <List size={16} /> View Entries
+            <List size={16} /> View Vihar Entries
           </Link>
           <Link
             to="/add"

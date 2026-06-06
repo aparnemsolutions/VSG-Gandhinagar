@@ -7,6 +7,8 @@ import EntryConfirm from './pages/EntryConfirm';
 import Entries from './pages/Entries';
 import Reports from './pages/Reports';
 import ImportantContacts from './pages/ImportantContacts';
+import ViharDirectory from './pages/ViharDirectory';
+import ViharDirectoryDetail from './pages/ViharDirectoryDetail';
 
 export default function App() {
   return (
@@ -18,6 +20,8 @@ export default function App() {
             <Route path="/add" element={<AddEntry />} />
             <Route path="/confirm" element={<EntryConfirm />} />
             <Route path="/entries" element={<Entries />} />
+            <Route path="/directory" element={<ViharDirectory />} />
+            <Route path="/directory/:row" element={<ViharDirectoryDetail />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/contacts" element={<ImportantContacts />} />
             <Route path="*" element={<Navigate to="/" replace />} />
