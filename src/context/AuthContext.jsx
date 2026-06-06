@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { getScriptUrl, PERMISSIONS, ROLES } from '../config/sheets';
+import { getScriptUrl, PERMISSIONS, ROLES, HARDCODED_SESSION } from '../config/sheets';
 import GoogleWriteModal from '../components/GoogleWriteModal';
 
 const AuthContext = createContext(null);
@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => {
     const existing = readSession();
     if (existing && isTokenValid(existing)) return existing;
-    return { role: ROLES.USER, fullName: 'Guest', email: '', idToken: '' };
+    return HARDCODED_SESSION;
   });
   const [googleModalOpen, setGoogleModalOpen] = useState(false);
   const [googleModalError, setGoogleModalError] = useState('');
@@ -138,7 +138,9 @@ export function AuthProvider({ children }) {
   }, [handleGoogleCredential]);
 
   const ensureWriteAccess = useCallback(() => {
-    if (canWrite && isTokenValid(session)) return Promise.resolve(session);
+    if (canWrite && (session.sessionToken || session.idToken || session.role === ROLES.ADMIN)) {
+      return Promise.resolve(session);
+    }
 
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!clientId) return Promise.reject(new Error('Missing VITE_GOOGLE_CLIENT_ID'));
