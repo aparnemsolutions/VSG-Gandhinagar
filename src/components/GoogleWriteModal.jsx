@@ -1,11 +1,29 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { X } from 'lucide-react';
 
 export default function GoogleWriteModal({ open, clientId, error, onClose, onInit }) {
   const buttonRef = useRef(null);
+  const [googleAvailable, setGoogleAvailable] = useState(false);
 
-  const googleAvailable = useMemo(() => {
-    return typeof window !== 'undefined' && window.google?.accounts?.id;
+  useEffect(() => {
+    if (!open) return;
+    if (typeof window === 'undefined') return;
+
+    const check = () => {
+      const available = Boolean(window.google?.accounts?.id);
+      setGoogleAvailable(available);
+      return available;
+    };
+
+    if (check()) return;
+
+    const interval = window.setInterval(() => {
+      if (check()) {
+        window.clearInterval(interval);
+      }
+    }, 250);
+
+    return () => window.clearInterval(interval);
   }, [open]);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { getScriptUrl, PERMISSIONS, ROLES } from '../config/sheets';
 import GoogleWriteModal from '../components/GoogleWriteModal';
 
@@ -97,25 +97,29 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const stored = readSession();
-    if (!stored || !stored.sessionToken) return;
+    if (!stored) return;
     if (!isTokenValid(stored)) return;
+
     const token = stored.sessionToken || stored.idToken;
     if (!token) return;
 
-    scriptApi({ action: 'sessionInfo', sessionToken: token })
+    const action = stored.sessionToken ? 'sessionInfo' : 'googleLogin';
+    const payload = stored.sessionToken ? { action, sessionToken: token } : { action, idToken: token };
+
+    scriptApi(payload)
       .then((res) => {
-        if (res?.success) {
-          const next = {
-            role: res.role || stored.role || ROLES.USER,
-            fullName: res.fullName || stored.fullName || res.email || 'User',
-            email: res.email || stored.email || '',
-            idToken: stored.idToken || '',
-            sessionToken: stored.sessionToken,
-            expires: stored.expires || '',
-          };
-          setSession(next);
-          writeSession(next);
-        }
+        if (!res?.success) return;
+
+        const next = {
+          role: res.role || stored.role || ROLES.USER,
+          fullName: res.fullName || stored.fullName || res.email || 'User',
+          email: res.email || stored.email || '',
+          idToken: stored.idToken || token,
+          sessionToken: res.sessionToken || stored.sessionToken || '',
+          expires: res.expires || stored.expires || '',
+        };
+        setSession(next);
+        writeSession(next);
       })
       .catch(() => {
         // Keep the existing local session if the network check fails.
