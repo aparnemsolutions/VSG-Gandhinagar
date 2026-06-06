@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { BookOpen, Phone, Search, X } from "lucide-react";
 import { useSheets } from "../hooks/useSheets";
 import { useNavigate } from 'react-router-dom';
-import { DIRECTORY_SHEET_ID, DIRECTORY_SHEET_NAME } from "../config/directory";
 import { fetchDirectoryRecords } from '../utils/directoryLoader';
 
 export default function ViharDirectory() {
@@ -21,16 +20,10 @@ export default function ViharDirectory() {
   const navigate = useNavigate();
 
   async function loadDirectory() {
-    if (!DIRECTORY_SHEET_ID) {
-      setFetchError("");
-      setPeople([]);
-      return;
-    }
-
     setFetchingDirectory(true);
     setFetchError("");
     try {
-      const records = await fetchDirectoryRecords(DIRECTORY_SHEET_ID, DIRECTORY_SHEET_NAME);
+      const records = await fetchDirectoryRecords();
       setPeople(records);
     } catch (error) {
       setFetchError(error instanceof Error ? error.message : "Failed to load directory.");
@@ -176,8 +169,6 @@ export default function ViharDirectory() {
       ...keys.filter((key) => !preferred.includes(key)),
     ];
   }
-
-  const isDirectoryConfigured = Boolean(DIRECTORY_SHEET_ID);
 
   return (
     <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">

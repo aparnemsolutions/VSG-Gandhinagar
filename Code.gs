@@ -18,6 +18,7 @@ const GOOGLE_CLIENT_ID_FALLBACK = '59223363231-s3q8p0b9flkpuhd4r1qbedbh4c8gu3e2.
 
 const SHEETS = {
   VIHAR:     'Vihar Seva',
+  DIRECTORY: 'Directory',
   MASTER:    'Master Data',
   USERS:     'Users',
   CONTACTS:  'Important Contacts',
@@ -70,16 +71,17 @@ function doGet(e) {
   const tokenParam = e.parameter.sessionToken || e.parameter.idToken;
 
   try {
-    if      (action === 'getAll')    result = getAll();
-    else if (action === 'save')      result = saveEntry(e.parameter.data, tokenParam);
-    else if (action === 'delete')    result = deleteEntry(e.parameter.id, tokenParam);
-    else if (action === 'getConfig') result = getConfig();
-    else if (action === 'login')     result = login(e.parameter.username, e.parameter.password);
-    else if (action === 'googleLogin') result = googleLogin(tokenParam);
-    else if (action === 'newYear')   result = newYear(e.parameter.year, tokenParam);
-    else if (action === 'ping')      result = { ok: true, at: new Date().toISOString() };
-    else if (action === 'authorize') result = authorize();
-    else                             result = { error: 'Unknown action: ' + action };
+    if      (action === 'getAll')      result = getAll();
+    else if (action === 'save')        result = saveEntry(e.parameter.data, tokenParam);
+    else if (action === 'delete')      result = deleteEntry(e.parameter.id, tokenParam);
+    else if (action === 'getConfig')   result = getConfig();
+    else if (action === 'getDirectory') result = getDirectoryRecords();
+    else if (action === 'login')        result = login(e.parameter.username, e.parameter.password);
+    else if (action === 'googleLogin')  result = googleLogin(tokenParam);
+    else if (action === 'newYear')      result = newYear(e.parameter.year, tokenParam);
+    else if (action === 'ping')         result = { ok: true, at: new Date().toISOString() };
+    else if (action === 'authorize')    result = authorize();
+    else                               result = { error: 'Unknown action: ' + action };
   } catch (err) {
     result = { error: err.message };
   }
@@ -225,6 +227,29 @@ function getConfig() {
   }
 
   return config;
+}
+
+// ── getDirectoryRecords -------------------------------------------------------
+
+function getDirectoryRecords() {
+  const sheet = SS.getSheetByName(SHEETS.DIRECTORY);
+  if (!sheet) return [];
+
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return [];
+
+  const headers = rows[0].map((h) => String(h || '').trim());
+  return rows.slice(1)
+    .filter((row) => row.some((cell) => String(cell || '').trim()))
+    .map((row, index) => {
+      const record = {};
+      headers.forEach((header, colIndex) => {
+        if (!header) return;
+        record[header] = row[colIndex] == null ? '' : row[colIndex];
+      });
+      record._rowIndex = index + 2;
+      return record;
+    });
 }
 
 // ── login (Phase 2) ──────────────────────────────────────────────────────────
