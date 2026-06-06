@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { Home, List, BarChart2, Phone } from 'lucide-react';
+import { Home, List, BookOpen, Phone } from 'lucide-react';
 
 const TABS = [
   { to: '/', icon: Home, label: 'Home' },
-  { to: '/entries', icon: List, label: 'Entries' },
+  { to: '/entries', icon: List, label: 'Vihar Entries' },
+  { to: '/directory', icon: BookOpen, label: 'Directory' },
   { to: '/contacts', icon: Phone, label: 'Imp. Contacts' },
 ];
 
