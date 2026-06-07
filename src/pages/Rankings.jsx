@@ -87,25 +87,27 @@ export default function Rankings() {
         </div>
       </header>
 
-      <div className="sticky top-0 z-20 bg-[#FFFDF5] px-4 pt-3 pb-3">
-        <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-[#E8C97A] shadow-sm">
-          <Search size={18} className="text-[#C96800] flex-shrink-0" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search your name"
-            className="flex-1 bg-transparent placeholder:text-[#8B6525] text-sm text-[#3D1F00] outline-none"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              className="text-[#C96800] p-2 rounded-md hover:bg-[#FFF3D6]"
-              title="Clear"
-            >
-              <X size={16} />
-            </button>
-          )}
+      <div className="sticky top-0 z-20 px-4 pt-3 pb-3">
+        <div className="rounded-2xl border border-[#E8C97A] px-3 py-2 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2">
+            <Search size={18} className="text-[#C96800] flex-shrink-0" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search your name"
+              className="flex-1 bg-transparent placeholder:text-[#8B6525] text-sm text-[#3D1F00] outline-none"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="text-[#C96800] p-2 rounded-md hover:bg-[#FFF3D6]"
+                title="Clear"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -138,7 +140,7 @@ export default function Rankings() {
               <p className="font-black text-sm text-[#C96800] mb-3">
                 All Vihar Sevika
               </p>
-              <div className="space-y-1 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-1">
                 {filteredSevika.map((r) => (
                   <RankRow
                     key={`sevika-${r.name}`}
