@@ -26,7 +26,7 @@ export default function ViharDirectory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [people, setPeople] = useState([]);
+  const [people, setPeople] = useState(null);
   const [fetchingDirectory, setFetchingDirectory] = useState(false);
   const [fetchError, setFetchError] = useState("");
 
@@ -53,7 +53,7 @@ export default function ViharDirectory() {
       setPeople(filtered);
     } catch (error) {
       setFetchError(error instanceof Error ? error.message : "Failed to load directory.");
-      setPeople([]);
+      setPeople(null);
     } finally {
       setFetchingDirectory(false);
     }
@@ -90,6 +90,7 @@ export default function ViharDirectory() {
 
   const query = searchQuery.trim().toLowerCase();
   const filteredPeople = useMemo(() => {
+    if (!people) return [];
     if (!query) return people;
     return people.filter((person) => {
       const name = getPersonName(person).toLowerCase();
@@ -252,9 +253,11 @@ export default function ViharDirectory() {
       <div className="scroll-area px-4 pt-5 pb-28 space-y-4">
         <div className="bg-white border border-[#F5E5B0] rounded-2xl overflow-hidden">
           <div className="bg-[#FFFDF5] border-b border-[#F5E5B0] px-4 py-3">
-            <p className="font-black text-sm text-[#C96800]">{filteredPeople.length} people</p>
+            <p className="font-black text-sm text-[#C96800]">{fetchingDirectory ? 'Loading…' : `${filteredPeople.length} people`}</p>
           </div>
-          {filteredPeople.length === 0 ? (
+          {fetchingDirectory ? (
+            <div className="px-4 py-8 text-center text-sm text-[#8B6525]">Loading directory…</div>
+          ) : filteredPeople.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-[#8B6525]">
               {query ? "No matching names found." : "No directory entries available."}
             </div>
