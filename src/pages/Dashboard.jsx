@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ChevronDown, Plus, RefreshCw, Search, X } from "lucide-react";
 import { useSheets } from "../hooks/useSheets";
 import { useAuth } from "../context/AuthContext";
@@ -18,6 +18,8 @@ export default function Dashboard() {
   const { entries, config, loading, syncAll, scriptUrl, saveScriptUrl } =
     useSheets();
   const { fullName, role } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showSettings, setShowSettings] = useState(false);
   const [openRankingPanel, setOpenRankingPanel] = useState("sevak");
   const [rankingSearch, setRankingSearch] = useState("");
@@ -27,6 +29,13 @@ export default function Dashboard() {
   useEffect(() => {
     syncAll();
   }, [syncAll]);
+
+  useEffect(() => {
+    const tab = new URLSearchParams(location.search).get("tab");
+    if (tab === "annual") {
+      setActiveView("annual");
+    }
+  }, [location.search]);
 
   const currentMonthKey = getMonthKey(new Date().toISOString().slice(0, 10));
   const currentMonthEntries = entries.filter(
@@ -334,12 +343,7 @@ export default function Dashboard() {
                       </p>
                       <button
                         type="button"
-                        onClick={() =>
-                          window.open(
-                            `${window.location.origin}${window.location.pathname}#/rankings?type=sevak`,
-                            "_blank",
-                          )
-                        }
+                        onClick={() => navigate("/rankings?type=sevak")}
                         className="text-xs font-bold text-[#C96800] bg-white border border-[#E8C97A] rounded-xl px-3 py-1 hover:bg-[#FFF3D5]"
                       >
                         View all
@@ -379,12 +383,7 @@ export default function Dashboard() {
                       </p>
                       <button
                         type="button"
-                        onClick={() =>
-                          window.open(
-                            `${window.location.origin}${window.location.pathname}#/rankings?type=sevika`,
-                            "_blank",
-                          )
-                        }
+                        onClick={() => navigate("/rankings?type=sevika")}
                         className="text-xs font-bold text-[#C96800] bg-white border border-[#E8C97A] rounded-xl px-3 py-1 hover:bg-[#FFF3D5]"
                       >
                         View all
