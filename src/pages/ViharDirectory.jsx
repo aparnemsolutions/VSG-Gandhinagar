@@ -29,6 +29,7 @@ export default function ViharDirectory() {
   const [people, setPeople] = useState(null);
   const [fetchingDirectory, setFetchingDirectory] = useState(false);
   const [fetchError, setFetchError] = useState("");
+  const [workTypeFilter, setWorkTypeFilter] = useState("");
 
   useEffect(() => {
     syncAll();
@@ -119,7 +120,7 @@ export default function ViharDirectory() {
   const query = searchQuery.trim().toLowerCase();
   const filteredPeople = useMemo(() => {
     if (!people) return [];
-
+    // apply search query first
     let filtered = people;
     if (query) {
       filtered = people.filter((person) => {
@@ -151,13 +152,38 @@ export default function ViharDirectory() {
       });
     }
 
+    // apply work type filter (if selected)
+    if (workTypeFilter) {
+      filtered = filtered.filter((person) => {
+        const wt = String(
+          person["Work Type"] ||
+            person.WorkType ||
+            person["Occupation / Profession"] ||
+            "",
+        ).trim();
+        return wt.toLowerCase() === workTypeFilter.toLowerCase();
+      });
+    }
+
     // Sort alphabetically by name
     return filtered.sort((a, b) => {
       const nameA = getPersonName(a).toLowerCase();
       const nameB = getPersonName(b).toLowerCase();
       return nameA.localeCompare(nameB);
     });
-  }, [people, query]);
+  }, [people, query, workTypeFilter]);
+
+  const workTypeOptions = useMemo(() => {
+    if (!people) return [];
+    const set = new Set();
+    people.forEach((p) => {
+      const v = String(
+        p["Work Type"] || p.WorkType || p["Occupation / Profession"] || "",
+      ).trim();
+      if (v) set.add(v);
+    });
+    return Array.from(set).sort();
+  }, [people]);
 
   useEffect(() => {
     if (!selectedPerson) return;
@@ -323,6 +349,41 @@ export default function ViharDirectory() {
                 : `${filteredPeople.length} people`}
             </p>
           </div>
+
+          {workTypeOptions.length > 0 && (
+            <div className="px-4 py-2 border-b border-[#F5E5B0] bg-white">
+              <div className="flex items-center gap-3">
+                <label className="text-[11px] text-[#8B6525] font-bold">
+                  Work type
+                </label>
+                <select
+                  value={workTypeFilter}
+                  onChange={(e) => setWorkTypeFilter(e.target.value)}
+                  className="text-xs p-1 px-2 rounded-lg border border-[#E8C97A] bg-white"
+                  aria-label="Filter by work type"
+                  style={{ minWidth: 120 }}
+                >
+                  <option value="">All</option>
+                  {workTypeOptions.map((wt) => (
+                    <option key={wt} value={wt}>
+                      {wt}
+                    </option>
+                  ))}
+                </select>
+                {workTypeFilter && (
+                  <button
+                    type="button"
+                    onClick={() => setWorkTypeFilter("")}
+                    className="text-xs text-[#C96800] font-bold"
+                    aria-label="Clear work type filter"
+                    title="Clear"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           {fetchingDirectory ? (
             <div className="px-4 py-8 text-center text-sm text-[#8B6525]">
               Loading directory…

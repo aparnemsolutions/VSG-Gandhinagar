@@ -142,17 +142,17 @@ export default function Dashboard() {
           alt="VSG Logo"
           className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-orange-300"
         />
-      <div className="flex-1 min-w-0">
-  <h1 className="text-white font-black text-sm leading-none truncate">
-    Vihar Seva Group
-  </h1>
-  <p className="text-orange-200 text-[10px] font-bold leading-none mt-0.5 truncate">
-    VSG - Gandhinagar
-  </p>
-  <p className="text-orange-100 text-[10px] font-semibold leading-none mt-0.5 truncate">
-    Welcome, {fullName}
-  </p>
-</div>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-white font-black text-sm leading-none truncate">
+            Vihar Seva Group
+          </h1>
+          <p className="text-orange-200 text-[10px] font-bold leading-none mt-0.5 truncate">
+            VSG - Gandhinagar
+          </p>
+          <p className="text-orange-100 text-[10px] font-semibold leading-none mt-0.5 truncate">
+            Welcome, {fullName}
+          </p>
+        </div>
 
         {/* Setting Icon Excel Sheet sync */}
         {/* <button onClick={() => setShowSettings(true)} className="text-white p-2 rounded-xl hover:bg-orange-700" title="Settings">
@@ -166,12 +166,12 @@ export default function Dashboard() {
         >
           <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
         </button>
-       <Link
-  to="/add"
-  className="flex items-center gap-1 bg-white text-[#C96800] font-bold text-xs px-2.5 py-2 rounded-xl flex-shrink-0 whitespace-nowrap"
->
-  Add New Report
-</Link>
+        <Link
+          to="/add"
+          className="flex items-center gap-1 bg-white text-[#C96800] font-bold text-xs px-2.5 py-2 rounded-xl flex-shrink-0 whitespace-nowrap"
+        >
+          Add New Report
+        </Link>
       </header>
 
       <div className="px-4 pt-4">
@@ -328,9 +328,23 @@ export default function Dashboard() {
               <>
                 {yearlySevakTop.length > 0 && (
                   <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4">
-                    <p className="font-black text-sm text-[#C96800] mb-3">
-                      Top 3 Vihar Sevak
-                    </p>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="font-black text-sm text-[#C96800]">
+                        Top 3 Vihar Sevak
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.open(
+                            `${window.location.origin}${window.location.pathname}#/rankings?type=sevak`,
+                            "_blank",
+                          )
+                        }
+                        className="text-xs font-bold text-[#C96800] bg-white border border-[#E8C97A] rounded-xl px-3 py-1 hover:bg-[#FFF3D5]"
+                      >
+                        View all
+                      </button>
+                    </div>
                     <div
                       className="space-y-2"
                       style={
@@ -359,9 +373,23 @@ export default function Dashboard() {
 
                 {yearlySevikaTop.length > 0 && (
                   <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4">
-                    <p className="font-black text-sm text-[#C96800] mb-3">
-                      Top 3 Vihar Sevika
-                    </p>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="font-black text-sm text-[#C96800]">
+                        Top 3 Vihar Sevika
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.open(
+                            `${window.location.origin}${window.location.pathname}#/rankings?type=sevika`,
+                            "_blank",
+                          )
+                        }
+                        className="text-xs font-bold text-[#C96800] bg-white border border-[#E8C97A] rounded-xl px-3 py-1 hover:bg-[#FFF3D5]"
+                      >
+                        View all
+                      </button>
+                    </div>
                     <div
                       className="space-y-2"
                       style={
