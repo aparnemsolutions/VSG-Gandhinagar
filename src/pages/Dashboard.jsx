@@ -15,7 +15,8 @@ import road from "../assets/TotalKm.jpg";
 import number from "../assets/TotalVihar.png";
 
 export default function Dashboard() {
-  const { entries, config, loading, syncAll, scriptUrl, saveScriptUrl } = useSheets();
+  const { entries, config, loading, syncAll, scriptUrl, saveScriptUrl } =
+    useSheets();
   const { fullName, role } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
   const [openRankingPanel, setOpenRankingPanel] = useState("sevak");
@@ -33,11 +34,14 @@ export default function Dashboard() {
   );
   const stats = calcMonthStats(currentMonthEntries);
   const monthLabel = getMonthLabel(new Date().toISOString().slice(0, 10));
-  const yearLabel = config?.appConfig?.current_year_label || new Date().getFullYear();
+  const yearLabel =
+    config?.appConfig?.current_year_label || new Date().getFullYear();
   const yearly = calcYearlyStats(entries);
   const yearlySevakTop = topN(withDenseRanks(yearly.sevakRanking), 3);
   const yearlySevikaTop = topN(withDenseRanks(yearly.sevikaRanking), 3);
-  const previousMonths = yearly.months.filter((month) => month.key !== currentMonthKey);
+  const previousMonths = yearly.months.filter(
+    (month) => month.key !== currentMonthKey,
+  );
 
   const hasSevakRanking = stats.sevakRanking.length > 0;
   const hasSevikaRanking = stats.sevikaRanking.length > 0;
@@ -133,39 +137,54 @@ export default function Dashboard() {
       </header>*/}
 
       <header className="flex items-center gap-2.5 px-4 pt-4 pb-3 bg-[#C96800]">
-        <img src={logo} alt="VSG Logo" className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-orange-300" />
+        <img
+          src={logo}
+          alt="VSG Logo"
+          className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-orange-300"
+        />
         <div className="flex-1 min-w-0">
-          <h1 className="text-white font-black text-sm md:text-base leading-tight">Vihar Seva Group (VSG) Gandhinagar</h1>
-          <p className="text-orange-100 text-[11px] font-semibold truncate">Welcome, {fullName}</p>
-        </div> 
+          <h1 className="text-white font-black text-sm md:text-base leading-tight">
+            Vihar Seva Group (VSG) Gandhinagar
+          </h1>
+          <p className="text-orange-100 text-[8px] font-semibold truncate">
+            Welcome, {fullName}
+          </p>
+        </div>
 
-      {/* Setting Icon Excel Sheet sync */}
-      {/* <button onClick={() => setShowSettings(true)} className="text-white p-2 rounded-xl hover:bg-orange-700" title="Settings">
+        {/* Setting Icon Excel Sheet sync */}
+        {/* <button onClick={() => setShowSettings(true)} className="text-white p-2 rounded-xl hover:bg-orange-700" title="Settings">
           <Settings size={18} />
         </button> */}
 
-       <button onClick={syncAll} className="text-white p-2 rounded-xl hover:bg-orange-700" title="Sync">
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+        <button
+          onClick={syncAll}
+          className="text-white p-2 rounded-xl hover:bg-orange-700"
+          title="Sync"
+        >
+          <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
         </button>
-        <Link to="/add" className="flex items-center gap-1 bg-white text-[#C96800] font-bold text-sm px-2 py-2 rounded-xl flex-shrink-0">
+        <Link
+          to="/add"
+          className="flex items-center gap-1 bg-white text-[#C96800] font-bold text-sm px-2 py-2 rounded-xl flex-shrink-0"
+        >
           Add New Report
         </Link>
-      </header> 
+      </header>
 
       <div className="px-4 pt-4">
         <div className="grid grid-cols-2 gap-2 mb-4">
-          {['month', 'annual'].map((view) => (
+          {["month", "annual"].map((view) => (
             <button
               key={view}
               type="button"
               onClick={() => setActiveView(view)}
               className={`rounded-2xl border px-4 py-3 text-sm font-bold transition-all ${
                 activeView === view
-                  ? 'bg-[#C96800] text-white border-[#C96800]'
-                  : 'bg-white text-[#8B6525] border-[#E8C97A] hover:bg-[#FFF3D5]'
+                  ? "bg-[#C96800] text-white border-[#C96800]"
+                  : "bg-white text-[#8B6525] border-[#E8C97A] hover:bg-[#FFF3D5]"
               }`}
             >
-              {view === 'month' ? 'Monthly Report' : 'Annual Report'}
+              {view === "month" ? "Monthly Report" : "Annual Report"}
             </button>
           ))}
         </div>
@@ -173,19 +192,19 @@ export default function Dashboard() {
 
       <div className="scroll-area px-4 pb-24 space-y-4">
         <h2 className="font-black text-[#3D1F00] text-base">
-          {activeView === 'month' ? monthLabel : `Annual Report ${yearLabel}`}
+          {activeView === "month" ? monthLabel : `Annual Report ${yearLabel}`}
         </h2>
 
         <div className="grid grid-cols-2 gap-3">
           <StatCard
             label="Total Vihar"
-            value={activeView === 'month' ? stats.total : yearly.total}
+            value={activeView === "month" ? stats.total : yearly.total}
             color="#1B7A3A"
             image={number}
           />
           <StatCard
             label="Total KM"
-            value={`${activeView === 'month' ? stats.km : yearly.km} km`}
+            value={`${activeView === "month" ? stats.km : yearly.km} km`}
             color="#1B7A3A"
             image={road}
           />
@@ -194,44 +213,69 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-3">
           <StatCard
             label="Sadhu Bhagvant"
-            value={activeView === 'month' ? stats.sadhu : yearly.sadhu}
+            value={activeView === "month" ? stats.sadhu : yearly.sadhu}
             image={sadhu}
             color="#1B7A3A"
           />
           <StatCard
             label="Sadhviji Bhagvant"
-            value={activeView === 'month' ? stats.sadhviji : yearly.sadhviji}
+            value={activeView === "month" ? stats.sadhviji : yearly.sadhviji}
             image={sadhviji}
             color="#1B7A3A"
           />
         </div>
 
-        {activeView === 'month' ? (
+        {activeView === "month" ? (
           <>
             {previousMonths.length > 0 ? (
               <div className="bg-white border border-[#F5E5B0] rounded-2xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-[#F5E5B0] bg-[#FFFDF5]">
-                  <p className="font-black text-sm text-[#3D1F00]">Month-Wise Report</p>
+                  <p className="font-black text-sm text-[#3D1F00]">
+                    Month-Wise Report
+                  </p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-[#FFF3D6]">
-                        <th className="text-left px-5 py-2 font-black text-[#8B6525] text-center">Month</th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Vihar</th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Distance (KM)</th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Sadhu Bhagvant</th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">Total Sadhviji Bhagvant</th>
+                        <th className="text-left px-5 py-2 font-black text-[#8B6525] text-center">
+                          Month
+                        </th>
+                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
+                          Total Vihar
+                        </th>
+                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
+                          Total Distance (KM)
+                        </th>
+                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
+                          Total Sadhu Bhagvant
+                        </th>
+                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
+                          Total Sadhviji Bhagvant
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {previousMonths.map((month) => (
-                        <tr key={month.key} className="border-t border-[#F5E5B0]">
-                          <td className="px-3 py-2.5 font-semibold font-bold text-[#C96800] whitespace-nowrap">{month.label}</td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.total}</td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.km} KM</td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.sadhu}</td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">{month.sadhviji}</td>
+                        <tr
+                          key={month.key}
+                          className="border-t border-[#F5E5B0]"
+                        >
+                          <td className="px-3 py-2.5 font-semibold font-bold text-[#C96800] whitespace-nowrap">
+                            {month.label}
+                          </td>
+                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
+                            {month.total}
+                          </td>
+                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
+                            {month.km}
+                          </td>
+                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
+                            {month.sadhu}
+                          </td>
+                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
+                            {month.sadhviji}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -240,7 +284,8 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 text-[#8B6525] text-sm">
-                Previous month totals will appear here once the next month begins.
+                Previous month totals will appear here once the next month
+                begins.
               </div>
             )}
 
@@ -279,20 +324,62 @@ export default function Dashboard() {
             ) : (
               <>
                 {yearlySevakTop.length > 0 && (
-                  <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-2">
-                    <p className="font-black text-sm text-[#C96800] mb-3">Top 3 Vihar Sevak</p>
-                    {yearlySevakTop.map((record) => (
-                      <Medal key={record.name} rank={record.rank} name={record.name} count={record.count} color="#1B7A3A" />
-                    ))}
+                  <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4">
+                    <p className="font-black text-sm text-[#C96800] mb-3">
+                      Top 3 Vihar Sevak
+                    </p>
+                    <div
+                      className="space-y-2"
+                      style={
+                        yearlySevakTop.length > 4
+                          ? {
+                              maxHeight: "200px",
+                              overflowY: "auto",
+                              overflowX: "hidden",
+                              paddingRight: "4px",
+                            }
+                          : {}
+                      }
+                    >
+                      {yearlySevakTop.map((record) => (
+                        <Medal
+                          key={record.name}
+                          rank={record.rank}
+                          name={record.name}
+                          count={record.count}
+                          color="#1B7A3A"
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
 
                 {yearlySevikaTop.length > 0 && (
-                  <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-2">
-                    <p className="font-black text-sm text-[#C96800] mb-3">Top 3 Vihar Sevika</p>
-                    <div className="space-y-2">
+                  <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4">
+                    <p className="font-black text-sm text-[#C96800] mb-3">
+                      Top 3 Vihar Sevika
+                    </p>
+                    <div
+                      className="space-y-2"
+                      style={
+                        yearlySevikaTop.length > 4
+                          ? {
+                              maxHeight: "200px",
+                              overflowY: "auto",
+                              overflowX: "hidden",
+                              paddingRight: "4px",
+                            }
+                          : {}
+                      }
+                    >
                       {yearlySevikaTop.map((record) => (
-                        <Medal key={record.name} rank={record.rank} name={record.name} count={record.count} color="#1B7A3A" />
+                        <Medal
+                          key={record.name}
+                          rank={record.rank}
+                          name={record.name}
+                          count={record.count}
+                          color="#1B7A3A"
+                        />
                       ))}
                     </div>
                   </div>
@@ -313,14 +400,25 @@ function StatCard({ label, value, color, image }) {
         <img src={image} alt="" className="w-12 h-15 object-contain" />
       </div>
       <div className="flex flex-col">
-        <span className="text-sm font-bold text-[#C96800] leading-tight">{label}</span>
-        <span className="font-black text-xl" style={{ color }}>{value}</span>
+        <span className="text-sm font-bold text-[#C96800] leading-tight">
+          {label}
+        </span>
+        <span className="font-black text-xl" style={{ color }}>
+          {value}
+        </span>
       </div>
     </div>
   );
 }
 
-function Section({ title, color, children, collapsible = false, isOpen = true, onToggle }) {
+function Section({
+  title,
+  color,
+  children,
+  collapsible = false,
+  isOpen = true,
+  onToggle,
+}) {
   return (
     <div className="bg-white border border-[#F5E5B0] rounded-2xl overflow-hidden">
       {collapsible ? (
@@ -329,9 +427,14 @@ function Section({ title, color, children, collapsible = false, isOpen = true, o
           onClick={onToggle}
           aria-expanded={isOpen}
           className="w-full px-4 py-2.5 border-b border-[#F5E5B0] bg-[#FFFDF5] flex items-center justify-between gap-3 text-left"
-          style={{ backgroundColor: color + "18", borderLeft: `4px solid ${color}` }}
+          style={{
+            backgroundColor: color + "18",
+            borderLeft: `4px solid ${color}`,
+          }}
         >
-          <span className="font-black text-sm" style={{ color }}>{title}</span>
+          <span className="font-black text-sm" style={{ color }}>
+            {title}
+          </span>
           <ChevronDown
             size={18}
             className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -339,11 +442,21 @@ function Section({ title, color, children, collapsible = false, isOpen = true, o
           />
         </button>
       ) : (
-        <div className="px-4 py-2.5 border-b border-[#F5E5B0] bg-[#FFFDF5]" style={{ backgroundColor: color + "18", borderLeft: `4px solid ${color}` }}>
-          <p className="font-black text-sm" style={{ color }}>{title}</p>
+        <div
+          className="px-4 py-2.5 border-b border-[#F5E5B0] bg-[#FFFDF5]"
+          style={{
+            backgroundColor: color + "18",
+            borderLeft: `4px solid ${color}`,
+          }}
+        >
+          <p className="font-black text-sm" style={{ color }}>
+            {title}
+          </p>
         </div>
       )}
-      {(!collapsible || isOpen) && <div className="px-4 py-2 divide-y divide-[#F5E5B0]">{children}</div>}
+      {(!collapsible || isOpen) && (
+        <div className="px-4 py-2 divide-y divide-[#F5E5B0]">{children}</div>
+      )}
     </div>
   );
 }
@@ -351,9 +464,15 @@ function Section({ title, color, children, collapsible = false, isOpen = true, o
 function RankRow({ rank, name, count, color }) {
   return (
     <div className="flex items-center gap-3 py-2.5">
-      <span className="text-xs font-black text-[#8B6525] w-5 text-center">{rank}.</span>
-      <span className="flex-1 text-sm font-semibold text-[#3D1F00]">{name}</span>
-      <span className="text-sm font-black" style={{ color }}>{count}</span>
+      <span className="text-xs font-black text-[#8B6525] w-5 text-center">
+        {rank}.
+      </span>
+      <span className="flex-1 text-sm font-semibold text-[#3D1F00]">
+        {name}
+      </span>
+      <span className="text-sm font-black" style={{ color }}>
+        {count}
+      </span>
     </div>
   );
 }

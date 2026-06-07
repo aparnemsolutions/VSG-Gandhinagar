@@ -1,24 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { BookOpen, Phone, Search, X } from "lucide-react";
 import { useSheets } from "../hooks/useSheets";
-import { useNavigate } from 'react-router-dom';
-import { fetchDirectoryRecords } from '../utils/directoryLoader';
+import { useNavigate } from "react-router-dom";
+import { fetchDirectoryRecords } from "../utils/directoryLoader";
 
 const DIRECTORY_PROFILE_KEYS = [
-  'Email Id',
-  'First Name',
-  'Middle Name',
-  'Last Name',
-  'Gender',
-  'Blood Group',
-  'Contact Number',
-  'Address',
-  'Area',
-  'City',
-  'Work Type',
-  'Company / Business Name',
-  'Occupation / Profession',
-  'Office Location / Business Area',
+  "Email Id",
+  "First Name",
+  "Middle Name",
+  "Last Name",
+  "Gender",
+  "Blood Group",
+  "Contact Number",
+  "Address",
+  "Area",
+  "City",
+  "Work Type",
+  "Company / Business Name",
+  "Occupation / Profession",
+  "Office Location / Business Area",
 ];
 
 export default function ViharDirectory() {
@@ -44,7 +44,10 @@ export default function ViharDirectory() {
       const filtered = records.map((record) => {
         const normalized = { _rowIndex: record._rowIndex };
         DIRECTORY_PROFILE_KEYS.forEach((key) => {
-          if (Object.prototype.hasOwnProperty.call(record, key) && String(record[key] ?? '').trim() !== '') {
+          if (
+            Object.prototype.hasOwnProperty.call(record, key) &&
+            String(record[key] ?? "").trim() !== ""
+          ) {
             normalized[key] = record[key];
           }
         });
@@ -52,7 +55,9 @@ export default function ViharDirectory() {
       });
       setPeople(filtered);
     } catch (error) {
-      setFetchError(error instanceof Error ? error.message : "Failed to load directory.");
+      setFetchError(
+        error instanceof Error ? error.message : "Failed to load directory.",
+      );
       setPeople(null);
     } finally {
       setFetchingDirectory(false);
@@ -65,49 +70,92 @@ export default function ViharDirectory() {
 
   function getPersonName(person) {
     if (!person) return "";
-    const directName = String(person.Name || person.name || person['Full Name'] || person.FullName || "").trim();
+    const directName = String(
+      person.Name ||
+        person.name ||
+        person["Full Name"] ||
+        person.FullName ||
+        "",
+    ).trim();
     if (directName) return directName;
 
-    const first = String(person['First Name'] || person.FirstName || "").trim();
-    const middle = String(person['Middle Name'] || person.MiddleName || "").trim();
-    const last = String(person['Last Name'] || person.LastName || "").trim();
+    const first = String(person["First Name"] || person.FirstName || "").trim();
+    const middle = String(
+      person["Middle Name"] || person.MiddleName || "",
+    ).trim();
+    const last = String(person["Last Name"] || person.LastName || "").trim();
     const full = [first, middle, last].filter(Boolean).join(" ");
-    return full || String(person['Email Id'] || person.email || "").trim();
+    return full || String(person["Email Id"] || person.email || "").trim();
   }
 
   function getPersonRole(person) {
     if (!person) return "";
     return (
-      String(person.Role || person.role || person['Work Type'] || person['Occupation / Profession'] || person['Company / Business Name'] || "").trim() ||
-      String(person['Area'] || person.area || person['City'] || person.city || "").trim()
+      String(
+        person.Role ||
+          person.role ||
+          person["Work Type"] ||
+          person["Occupation / Profession"] ||
+          person["Company / Business Name"] ||
+          "",
+      ).trim() ||
+      String(
+        person["Area"] || person.area || person["City"] || person.city || "",
+      ).trim()
     );
   }
 
   function getPersonPhone(person) {
     if (!person) return "";
-    return String(person['Contact Number'] || person['Phone'] || person.ContactNumber || person.phone || "").trim();
+    return String(
+      person["Contact Number"] ||
+        person["Phone"] ||
+        person.ContactNumber ||
+        person.phone ||
+        "",
+    ).trim();
   }
 
   const query = searchQuery.trim().toLowerCase();
   const filteredPeople = useMemo(() => {
     if (!people) return [];
-    if (!query) return people;
-    return people.filter((person) => {
-      const name = getPersonName(person).toLowerCase();
-      const role = getPersonRole(person).toLowerCase();
-      const note = String(person.Note || person.note || "").toLowerCase();
-      const email = String(person['Email Id'] || person.email || person.Email || "").toLowerCase();
-      const section = String(person.Section || person.section || person['Area'] || person.area || person['City'] || person.city || "").toLowerCase();
-      const contact = getPersonPhone(person).toLowerCase();
 
-      return (
-        name.includes(query) ||
-        role.includes(query) ||
-        note.includes(query) ||
-        email.includes(query) ||
-        section.includes(query) ||
-        contact.includes(query)
-      );
+    let filtered = people;
+    if (query) {
+      filtered = people.filter((person) => {
+        const name = getPersonName(person).toLowerCase();
+        const role = getPersonRole(person).toLowerCase();
+        const note = String(person.Note || person.note || "").toLowerCase();
+        const email = String(
+          person["Email Id"] || person.email || person.Email || "",
+        ).toLowerCase();
+        const section = String(
+          person.Section ||
+            person.section ||
+            person["Area"] ||
+            person.area ||
+            person["City"] ||
+            person.city ||
+            "",
+        ).toLowerCase();
+        const contact = getPersonPhone(person).toLowerCase();
+
+        return (
+          name.includes(query) ||
+          role.includes(query) ||
+          note.includes(query) ||
+          email.includes(query) ||
+          section.includes(query) ||
+          contact.includes(query)
+        );
+      });
+    }
+
+    // Sort alphabetically by name
+    return filtered.sort((a, b) => {
+      const nameA = getPersonName(a).toLowerCase();
+      const nameB = getPersonName(b).toLowerCase();
+      return nameA.localeCompare(nameB);
     });
   }, [people, query]);
 
@@ -115,11 +163,14 @@ export default function ViharDirectory() {
     if (!selectedPerson) return;
     const selectedName = getPersonName(selectedPerson).trim();
     if (!selectedName) return;
-    const stillVisible = filteredPeople.some((person) => getPersonName(person).trim() === selectedName);
+    const stillVisible = filteredPeople.some(
+      (person) => getPersonName(person).trim() === selectedName,
+    );
     if (!stillVisible) setSelectedPerson(null);
   }, [filteredPeople, selectedPerson]);
 
-  const yearLabel = config?.appConfig?.current_year_label || new Date().getFullYear();
+  const yearLabel =
+    config?.appConfig?.current_year_label || new Date().getFullYear();
   const yearKey = String(yearLabel);
   const currentYearVihars = useMemo(() => {
     if (!selectedPerson) return [];
@@ -130,7 +181,9 @@ export default function ViharDirectory() {
       .filter((entry) => String(entry.date).slice(0, 4) === yearKey)
       .filter((entry) => {
         const sevaks = Array.isArray(entry.sevak) ? entry.sevak : [entry.sevak];
-        const sevikas = Array.isArray(entry.sevika) ? entry.sevika : [entry.sevika];
+        const sevikas = Array.isArray(entry.sevika)
+          ? entry.sevika
+          : [entry.sevika];
         return (
           sevaks.some((name) => String(name).trim() === personName) ||
           sevikas.some((name) => String(name).trim() === personName)
@@ -140,40 +193,44 @@ export default function ViharDirectory() {
 
   function parseCsv(csvText) {
     const lines = csvText.split(/\r?\n/);
-    return lines.map((line) => {
-      const row = [];
-      let current = "";
-      let inQuotes = false;
+    return lines
+      .map((line) => {
+        const row = [];
+        let current = "";
+        let inQuotes = false;
 
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"') {
-          if (inQuotes && line[i + 1] === '"') {
-            current += '"';
-            i += 1;
-          } else {
-            inQuotes = !inQuotes;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+              current += '"';
+              i += 1;
+            } else {
+              inQuotes = !inQuotes;
+            }
+            continue;
           }
-          continue;
+
+          if (char === "," && !inQuotes) {
+            row.push(current);
+            current = "";
+            continue;
+          }
+
+          current += char;
         }
 
-        if (char === "," && !inQuotes) {
-          row.push(current);
-          current = "";
-          continue;
-        }
-
-        current += char;
-      }
-
-      row.push(current);
-      return row;
-    }).filter((row) => row.some((cell) => String(cell || "").trim()));
+        row.push(current);
+        return row;
+      })
+      .filter((row) => row.some((cell) => String(cell || "").trim()));
   }
 
   function findHeaderRowIndex(rows) {
     for (let i = 0; i < rows.length; i += 1) {
-      const nonEmptyCells = rows[i].filter((cell) => String(cell || "").trim()).length;
+      const nonEmptyCells = rows[i].filter((cell) =>
+        String(cell || "").trim(),
+      ).length;
       if (nonEmptyCells >= 2) {
         return i;
       }
@@ -189,7 +246,9 @@ export default function ViharDirectory() {
   }
 
   function getDetailKeys(person) {
-    const keys = Object.keys(person).filter((key) => key && !/^name$/i.test(key));
+    const keys = Object.keys(person).filter(
+      (key) => key && !/^name$/i.test(key),
+    );
     const preferred = ["Role", "Section", "Phone", "Email", "Note"];
     return [
       ...preferred.filter((key) => keys.includes(key)),
@@ -224,7 +283,9 @@ export default function ViharDirectory() {
             </button>
           </div>
         ) : (
-          <h1 className="text-white font-black text-base flex-1">Vihar Directory</h1>
+          <h1 className="text-white font-black text-base flex-1">
+            Vihar Directory
+          </h1>
         )}
 
         {!isSearchOpen && (
@@ -246,20 +307,31 @@ export default function ViharDirectory() {
           className="text-white p-2 rounded-xl hover:bg-orange-700"
           title="Refresh"
         >
-          <BookOpen size={18} className={loading || fetchingDirectory ? "animate-spin" : ""} />
+          <BookOpen
+            size={18}
+            className={loading || fetchingDirectory ? "animate-spin" : ""}
+          />
         </button>
       </header>
 
       <div className="scroll-area px-4 pt-5 pb-28 space-y-4">
         <div className="bg-white border border-[#F5E5B0] rounded-2xl overflow-hidden">
           <div className="bg-[#FFFDF5] border-b border-[#F5E5B0] px-4 py-3">
-            <p className="font-black text-sm text-[#C96800]">{fetchingDirectory ? 'Loading…' : `${filteredPeople.length} people`}</p>
+            <p className="font-black text-sm text-[#C96800]">
+              {fetchingDirectory
+                ? "Loading…"
+                : `${filteredPeople.length} people`}
+            </p>
           </div>
           {fetchingDirectory ? (
-            <div className="px-4 py-8 text-center text-sm text-[#8B6525]">Loading directory…</div>
+            <div className="px-4 py-8 text-center text-sm text-[#8B6525]">
+              Loading directory…
+            </div>
           ) : filteredPeople.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-[#8B6525]">
-              {query ? "No matching names found." : "No directory entries available."}
+              {query
+                ? "No matching names found."
+                : "No directory entries available."}
             </div>
           ) : (
             <div className="divide-y divide-[#F5E5B0]">
@@ -270,14 +342,20 @@ export default function ViharDirectory() {
                   <button
                     key={`${person._rowIndex || index}-${index}`}
                     type="button"
-                    onClick={() => navigate(`/directory/${person._rowIndex || index + 1}`)}
+                    onClick={() =>
+                      navigate(`/directory/${person._rowIndex || index + 1}`)
+                    }
                     className={`w-full text-left px-4 py-3 flex items-center gap-3 ${
                       false ? "bg-[#FFF3D6]" : "hover:bg-[#FFF7E2]"
                     }`}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[#3D1F00] text-sm truncate">{name}</p>
-                      <p className="text-xs text-[#8B6525]">{getPersonRole(person) || "Vihar Member"}</p>
+                      <p className="font-bold text-[#3D1F00] text-sm truncate">
+                        {name}
+                      </p>
+                      <p className="text-xs text-[#8B6525]">
+                        {getPersonRole(person) || "Vihar Member"}
+                      </p>
                     </div>
                     {phone ? (
                       <a
@@ -304,7 +382,9 @@ export default function ViharDirectory() {
                   {getPersonName(selectedPerson).charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-black text-lg text-[#3D1F00] truncate">{getPersonName(selectedPerson)}</p>
+                  <p className="font-black text-lg text-[#3D1F00] truncate">
+                    {getPersonName(selectedPerson)}
+                  </p>
                   <p className="text-xs uppercase tracking-[0.2em] text-[#8B6525]">
                     {getPersonRole(selectedPerson) || "Vihar Member"}
                   </p>
@@ -314,9 +394,16 @@ export default function ViharDirectory() {
               <div className="grid grid-cols-2 gap-3">
                 {currentYearVihars.length > 0 ? (
                   currentYearVihars.map((entry) => (
-                    <div key={entry.id} className="bg-[#FFF7E2] rounded-2xl p-3 border border-[#F5E5B0]">
-                      <p className="text-xs text-[#8B6525]">Vihar No. {entry.viharNo}</p>
-                      <p className="font-black text-sm text-[#3D1F00]">{entry.from} → {entry.to}</p>
+                    <div
+                      key={entry.id}
+                      className="bg-[#FFF7E2] rounded-2xl p-3 border border-[#F5E5B0]"
+                    >
+                      <p className="text-xs text-[#8B6525]">
+                        Vihar No. {entry.viharNo}
+                      </p>
+                      <p className="font-black text-sm text-[#3D1F00]">
+                        {entry.from} → {entry.to}
+                      </p>
                       <p className="text-xs text-[#8B6525] mt-1">
                         {entry.date} · {entry.km} km
                       </p>
@@ -331,7 +418,9 @@ export default function ViharDirectory() {
             </div>
 
             <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4">
-              <p className="font-black text-sm text-[#C96800] mb-3">Profile Details</p>
+              <p className="font-black text-sm text-[#C96800] mb-3">
+                Profile Details
+              </p>
               <div className="space-y-3">
                 {getDetailKeys(selectedPerson).map((key) => {
                   const value = getDisplayValue(selectedPerson, key);
