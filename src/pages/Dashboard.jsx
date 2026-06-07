@@ -142,14 +142,17 @@ export default function Dashboard() {
           alt="VSG Logo"
           className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-orange-300"
         />
-        <div className="flex-1 min-w-0">
-          <h1 className="text-white font-black text-sm md:text-base leading-tight">
-            Vihar Seva Group (VSG) Gandhinagar
-          </h1>
-          <p className="text-orange-100 text-[8px] font-semibold truncate">
-            Welcome, {fullName}
-          </p>
-        </div>
+      <div className="flex-1 min-w-0">
+  <h1 className="text-white font-black text-sm leading-none truncate">
+    Vihar Seva Group
+  </h1>
+  <p className="text-orange-200 text-[10px] font-bold leading-none mt-0.5 truncate">
+    VSG - Gandhinagar
+  </p>
+  <p className="text-orange-100 text-[10px] font-semibold leading-none mt-0.5 truncate">
+    Welcome, {fullName}
+  </p>
+</div>
 
         {/* Setting Icon Excel Sheet sync */}
         {/* <button onClick={() => setShowSettings(true)} className="text-white p-2 rounded-xl hover:bg-orange-700" title="Settings">
@@ -163,12 +166,12 @@ export default function Dashboard() {
         >
           <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
         </button>
-        <Link
-          to="/add"
-          className="flex items-center gap-1 bg-white text-[#C96800] font-bold text-sm px-2 py-2 rounded-xl flex-shrink-0"
-        >
-          Add New Report
-        </Link>
+       <Link
+  to="/add"
+  className="flex items-center gap-1 bg-white text-[#C96800] font-bold text-xs px-2.5 py-2 rounded-xl flex-shrink-0 whitespace-nowrap"
+>
+  Add New Report
+</Link>
       </header>
 
       <div className="px-4 pt-4">
