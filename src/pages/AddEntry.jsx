@@ -109,7 +109,7 @@ export default function AddEntry() {
   const navigate = useNavigate();
   const location = useLocation();
   const { entries, config, saveEntry, nextViharNo, syncConfig, syncEntries } = useSheets();
-  const { session, ensureWriteAccess } = useAuth();
+  const { session, authReady, ensureWriteAccess } = useAuth();
 
   const editEntry = location.state?.entry || null;
 
@@ -145,6 +145,8 @@ export default function AddEntry() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!authReady) return;
+
     ensureWriteAccess().catch(() => {
       if (cancelled) return;
       // If auth is cancelled or fails, take the user back to a safe landing route.
@@ -153,7 +155,7 @@ export default function AddEntry() {
     return () => {
       cancelled = true;
     };
-  }, [ensureWriteAccess, navigate]);
+  }, [authReady, ensureWriteAccess, navigate]);
 
   const places = config?.places || [];
   const sevakNames = config?.sevakNames || [];
@@ -278,7 +280,7 @@ export default function AddEntry() {
         sevak: form.sevak.filter(Boolean),
         sevika: form.sevika.filter(Boolean),
         maharajNames: form.maharajNames.filter(Boolean),
-        savedBy: session.email || session.username || '',
+        savedBy: session.fullName || session.email || session.username || '',
         savedAt: new Date().toISOString(),
       };
       const res = await saveEntry(entry);

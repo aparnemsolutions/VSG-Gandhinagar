@@ -52,6 +52,7 @@ export function AuthProvider({ children }) {
     if (existing && isTokenValid(existing)) return existing;
     return { role: ROLES.USER, fullName: 'Guest', email: '', idToken: '', sessionToken: '', expires: '' };
   });
+  const [authReady, setAuthReady] = useState(false);
   const [googleModalOpen, setGoogleModalOpen] = useState(false);
   const [googleModalError, setGoogleModalError] = useState('');
   const pendingAuthRef = useRef(null);
@@ -97,11 +98,20 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const stored = readSession();
-    if (!stored) return;
-    if (!isTokenValid(stored)) return;
+    if (!stored) {
+      setAuthReady(true);
+      return;
+    }
+    if (!isTokenValid(stored)) {
+      setAuthReady(true);
+      return;
+    }
 
     const token = stored.sessionToken || stored.idToken;
-    if (!token) return;
+    if (!token) {
+      setAuthReady(true);
+      return;
+    }
 
     const action = stored.sessionToken ? 'sessionInfo' : 'googleLogin';
     const payload = stored.sessionToken ? { action, sessionToken: token } : { action, idToken: token };
@@ -123,6 +133,9 @@ export function AuthProvider({ children }) {
       })
       .catch(() => {
         // Keep the existing local session if the network check fails.
+      })
+      .finally(() => {
+        setAuthReady(true);
       });
   }, [scriptApi]);
 
@@ -225,7 +238,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, role: session.role, fullName: session.fullName, ensureWriteAccess }}>
+    <AuthContext.Provider value={{ session, role: session.role, fullName: session.fullName, authReady, ensureWriteAccess }}>
       {children}
       <GoogleWriteModal
         open={googleModalOpen}

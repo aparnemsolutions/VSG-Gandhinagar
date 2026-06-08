@@ -120,7 +120,7 @@ function saveEntry(dataStr, idToken) {
     const headers = rows[0];
 
     // Never trust client-supplied savedBy / savedAt
-    entry.savedBy = actor.email || '';
+    entry.savedBy = actor.fullName || actor.email || '';
     entry.savedAt = new Date().toISOString();
 
     const idCol = headers.indexOf('ID');
@@ -389,6 +389,27 @@ function createSessionForEmail_(email) {
   if (!sheet) {
     sheet = SS.insertSheet(sheetName);
     sheet.appendRow(['Token', 'Email', 'Expires', 'CreatedAt']);
+  }
+
+  const rows = sheet.getDataRange().getValues();
+  const headers = rows[0] || [];
+  const tokenCol = headers.indexOf('Token');
+  const emailCol = headers.indexOf('Email');
+  const expiresCol = headers.indexOf('Expires');
+  const now = new Date();
+
+  // Reuse an existing valid session token for the same email to avoid creating
+  // a new row every time the user authenticates during an active session.
+  for (let i = 1; i < rows.length; i++) {
+    const rowEmail = String(rows[i][emailCol] || '').trim().toLowerCase();
+    const rowToken = String(rows[i][tokenCol] || '').trim();
+    const rowExpires = rows[i][expiresCol];
+    if (rowEmail === String(email).trim().toLowerCase() && rowToken && rowExpires) {
+      const expiryDate = new Date(rowExpires);
+      if (!isNaN(expiryDate) && expiryDate > now) {
+        return { token: rowToken, expires: rowExpires };
+      }
+    }
   }
 
   const token = 'sess_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
