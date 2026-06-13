@@ -18,6 +18,7 @@ const DIRECTORY_PROFILE_KEYS = [
   "Work Type",
   "Company / Business Name",
   "Occupation / Profession",
+  "Team",
   "Office Location / Business Area",
 ];
 
@@ -30,6 +31,7 @@ export default function ViharDirectory() {
   const [fetchingDirectory, setFetchingDirectory] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [workTypeFilter, setWorkTypeFilter] = useState("");
+  const [teamFilter, setTeamFilter] = useState("");
 
   useEffect(() => {
     syncAll();
@@ -89,21 +91,19 @@ export default function ViharDirectory() {
     return full || String(person["Email Id"] || person.email || "").trim();
   }
 
-  function getPersonRole(person) {
+  function getPersonWorkType(person) {
     if (!person) return "";
-    return (
-      String(
-        person.Role ||
-          person.role ||
-          person["Work Type"] ||
-          person["Occupation / Profession"] ||
-          person["Company / Business Name"] ||
-          "",
-      ).trim() ||
-      String(
-        person["Area"] || person.area || person["City"] || person.city || "",
-      ).trim()
-    );
+    return String(person["Work Type"] || person.WorkType || "").trim();
+  }
+
+  function getPersonOccupation(person) {
+    if (!person) return "";
+    return String(person["Occupation / Profession"] || person.OccupationProfession || "").trim();
+  }
+
+  function getPersonTeam(person) {
+    if (!person) return "";
+    return String(person["Team"] || person.team || "").trim();
   }
 
   function getPersonPhone(person) {
@@ -125,7 +125,9 @@ export default function ViharDirectory() {
     if (query) {
       filtered = people.filter((person) => {
         const name = getPersonName(person).toLowerCase();
-        const role = getPersonRole(person).toLowerCase();
+        const workType = getPersonWorkType(person).toLowerCase();
+        const occupation = getPersonOccupation(person).toLowerCase();
+        const team = getPersonTeam(person).toLowerCase();
         const note = String(person.Note || person.note || "").toLowerCase();
         const email = String(
           person["Email Id"] || person.email || person.Email || "",
@@ -143,7 +145,9 @@ export default function ViharDirectory() {
 
         return (
           name.includes(query) ||
-          role.includes(query) ||
+          workType.includes(query) ||
+          occupation.includes(query) ||
+          team.includes(query) ||
           note.includes(query) ||
           email.includes(query) ||
           section.includes(query) ||
@@ -155,13 +159,16 @@ export default function ViharDirectory() {
     // apply work type filter (if selected)
     if (workTypeFilter) {
       filtered = filtered.filter((person) => {
-        const wt = String(
-          person["Work Type"] ||
-            person.WorkType ||
-            person["Occupation / Profession"] ||
-            "",
-        ).trim();
+        const wt = getPersonWorkType(person);
         return wt.toLowerCase() === workTypeFilter.toLowerCase();
+      });
+    }
+
+    // apply team filter (if selected)
+    if (teamFilter) {
+      filtered = filtered.filter((person) => {
+        const t = String(person["Team"] || person.team || "").trim();
+        return t.toLowerCase() === teamFilter.toLowerCase();
       });
     }
 
@@ -171,15 +178,23 @@ export default function ViharDirectory() {
       const nameB = getPersonName(b).toLowerCase();
       return nameA.localeCompare(nameB);
     });
-  }, [people, query, workTypeFilter]);
+  }, [people, query, workTypeFilter, teamFilter]);
 
   const workTypeOptions = useMemo(() => {
     if (!people) return [];
     const set = new Set();
     people.forEach((p) => {
-      const v = String(
-        p["Work Type"] || p.WorkType || p["Occupation / Profession"] || "",
-      ).trim();
+      const v = getPersonWorkType(p);
+      if (v) set.add(v);
+    });
+    return Array.from(set).sort();
+  }, [people]);
+
+  const teamOptions = useMemo(() => {
+    if (!people) return [];
+    const set = new Set();
+    people.forEach((p) => {
+      const v = String(p["Team"] || p.team || "").trim();
       if (v) set.add(v);
     });
     return Array.from(set).sort();
@@ -350,36 +365,73 @@ export default function ViharDirectory() {
             </p>
           </div>
 
-          {workTypeOptions.length > 0 && (
+          {(workTypeOptions.length > 0 || teamOptions.length > 0) && (
             <div className="px-4 py-2 border-b border-[#F5E5B0] bg-white">
               <div className="flex items-center gap-3">
-                <label className="text-[11px] text-[#8B6525] font-bold">
-                  Work type
-                </label>
-                <select
-                  value={workTypeFilter}
-                  onChange={(e) => setWorkTypeFilter(e.target.value)}
-                  className="text-xs p-1 px-2 rounded-lg border border-[#E8C97A] bg-white"
-                  aria-label="Filter by work type"
-                  style={{ minWidth: 120 }}
-                >
-                  <option value="">All</option>
-                  {workTypeOptions.map((wt) => (
-                    <option key={wt} value={wt}>
-                      {wt}
-                    </option>
-                  ))}
-                </select>
-                {workTypeFilter && (
-                  <button
-                    type="button"
-                    onClick={() => setWorkTypeFilter("")}
-                    className="text-xs text-[#C96800] font-bold"
-                    aria-label="Clear work type filter"
-                    title="Clear"
-                  >
-                    Clear
-                  </button>
+                {workTypeOptions.length > 0 && (
+                  <>
+                    <label className="text-[11px] text-[#8B6525] font-bold">
+                      Work type
+                    </label>
+                    <select
+                      value={workTypeFilter}
+                      onChange={(e) => setWorkTypeFilter(e.target.value)}
+                      className="text-xs p-1 px-2 rounded-lg border border-[#E8C97A] bg-white"
+                      aria-label="Filter by work type"
+                      style={{ minWidth: 120 }}
+                    >
+                      <option value="">All</option>
+                      {workTypeOptions.map((wt) => (
+                        <option key={wt} value={wt}>
+                          {wt}
+                        </option>
+                      ))}
+                    </select>
+                    {workTypeFilter && (
+                      <button
+                        type="button"
+                        onClick={() => setWorkTypeFilter("")}
+                        className="text-xs text-[#C96800] font-bold"
+                        aria-label="Clear work type filter"
+                        title="Clear"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {teamOptions.length > 0 && (
+                  <>
+                    <label className="text-[11px] text-[#8B6525] font-bold">
+                      Team
+                    </label>
+                    <select
+                      value={teamFilter}
+                      onChange={(e) => setTeamFilter(e.target.value)}
+                      className="text-xs p-1 px-2 rounded-lg border border-[#E8C97A] bg-white"
+                      aria-label="Filter by team"
+                      style={{ minWidth: 120 }}
+                    >
+                      <option value="">All</option>
+                      {teamOptions.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                    {teamFilter && (
+                      <button
+                        type="button"
+                        onClick={() => setTeamFilter("")}
+                        className="text-xs text-[#C96800] font-bold"
+                        aria-label="Clear team filter"
+                        title="Clear"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -399,6 +451,9 @@ export default function ViharDirectory() {
               {filteredPeople.map((person, index) => {
                 const name = getPersonName(person) || "Unknown";
                 const phone = getPersonPhone(person);
+                const workType = getPersonWorkType(person);
+                const occupation = getPersonOccupation(person);
+                const team = getPersonTeam(person);
                 return (
                   <button
                     key={`${person._rowIndex || index}-${index}`}
@@ -414,8 +469,12 @@ export default function ViharDirectory() {
                       <p className="font-bold text-[#3D1F00] text-sm truncate">
                         {name}
                       </p>
-                      <p className="text-xs text-[#8B6525]">
-                        {getPersonRole(person) || "Vihar Member"}
+                      <p className="text-[11px] text-[#8B6525] mt-1 truncate flex items-center gap-2">
+                        <span className="truncate">{workType}</span>
+                        <span className="text-[#C96800]">|</span>
+                        <span className="truncate">{occupation}</span>
+                        <span className="text-[#C96800]">|</span>
+                        <span className="truncate">{team}</span>
                       </p>
                     </div>
                     {phone ? (
@@ -446,8 +505,12 @@ export default function ViharDirectory() {
                   <p className="font-black text-lg text-[#3D1F00] truncate">
                     {getPersonName(selectedPerson)}
                   </p>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[#8B6525]">
-                    {getPersonRole(selectedPerson) || "Vihar Member"}
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#8B6525] mt-1 truncate flex items-center gap-2">
+                    <span className="truncate">{getPersonWorkType(selectedPerson)}</span>
+                    <span className="text-[#C96800]">|</span>
+                    <span className="truncate">{getPersonOccupation(selectedPerson)}</span>
+                    <span className="text-[#C96800]">|</span>
+                    <span className="truncate">{getPersonTeam(selectedPerson)}</span>
                   </p>
                 </div>
               </div>

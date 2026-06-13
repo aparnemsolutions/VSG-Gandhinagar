@@ -256,6 +256,7 @@ function getDirectoryRecords() {
     'Company / Business Name',
     'Occupation / Profession',
     'Office Location / Business Area',
+    'Team',
   ]);
 
   return rows.slice(headerRowIndex + 1)
