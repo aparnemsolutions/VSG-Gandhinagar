@@ -191,14 +191,24 @@ export default function ViharDirectory() {
   }, [people]);
 
   const teamOptions = useMemo(() => {
-    if (!people) return [];
-    const set = new Set();
-    people.forEach((p) => {
-      const v = String(p["Team"] || p.team || "").trim();
-      if (v) set.add(v);
-    });
-    return Array.from(set).sort();
-  }, [people]);
+  if (!people) return [];
+  const set = new Set();
+  people.forEach((p) => {
+    const v = String(p["Team"] || p.team || "").trim();
+    if (v) set.add(v);
+  });
+
+  const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+  return Array.from(set).sort((a, b) => {
+    const dayA = DAY_ORDER.indexOf(a);
+    const dayB = DAY_ORDER.indexOf(b);
+    if (dayA !== -1 && dayB !== -1) return dayA - dayB;
+    if (dayA !== -1) return -1;
+    if (dayB !== -1) return 1;
+    return a.toLowerCase().localeCompare(b.toLowerCase());
+  });
+}, [people]);
 
   useEffect(() => {
     if (!selectedPerson) return;
@@ -459,7 +469,9 @@ export default function ViharDirectory() {
                     key={`${person._rowIndex || index}-${index}`}
                     type="button"
                     onClick={() =>
-                      navigate(`/directory/${person._rowIndex || index + 1}`)
+                      navigate(`/directory/${person._rowIndex || index + 1}`, {
+                        state: { person },
+                      })
                     }
                     className={`w-full text-left px-4 py-3 flex items-center gap-3 ${
                       false ? "bg-[#FFF3D6]" : "hover:bg-[#FFF7E2]"
@@ -473,9 +485,10 @@ export default function ViharDirectory() {
                         <span className="truncate">{workType}</span>
                         <span className="text-[#C96800]">|</span>
                         <span className="truncate">{occupation}</span>
-                        <span className="text-[#C96800]">|</span>
-                        <span className="truncate">{team}</span>
+                        {/* <span className="text-[#C96800]">|</span>
+                        <span className="truncate">{team}</span> */}
                       </p>
+                      <p className="text-[#C96800] text-[11px] font-bold mt-1">{team} Team</p>
                     </div>
                     {phone ? (
                       <a

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, LoaderCircle, UserRound } from 'lucide-react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { fetchDirectoryRecords } from '../utils/directoryLoader';
 
 const DIRECTORY_PROFILE_KEYS = [
@@ -32,12 +32,20 @@ function getPersonName(person) {
 
 export default function ViharDirectoryDetail() {
   const { row } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const [person, setPerson] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [person, setPerson] = useState(location.state?.person ?? null);
+  const [loading, setLoading] = useState(!location.state?.person);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (location.state?.person) {
+      setPerson(location.state.person);
+      setLoading(false);
+      setError('');
+      return;
+    }
+
     let mounted = true;
     async function load() {
       setLoading(true);
@@ -48,7 +56,7 @@ export default function ViharDirectoryDetail() {
         const found = records.find((r) => Number(r._rowIndex) === rowIndex) || records[rowIndex - 1] || null;
         if (mounted) setPerson(found);
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        if (mounted) setError(err instanceof Error ? err.message : String(err));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -58,9 +66,46 @@ export default function ViharDirectoryDetail() {
     return () => {
       mounted = false;
     };
-  }, [row]);
+  }, [location.state, row]);
 
-  if (loading) return <div className="p-4">Loading…</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">
+        <header className="px-4 pt-4 pb-3 bg-[#C96800] flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="text-white p-2 rounded-xl hover:bg-orange-700" aria-label="Go back">
+            <ArrowLeft size={18} />
+          </button>
+          <h1 className="text-white font-black text-base">Loading profile</h1>
+        </header>
+
+        <div className="scroll-area px-4 pt-5 pb-28">
+          <div className="rounded-3xl border border-[#F5E5B0] bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="h-14 w-14 rounded-2xl bg-[#FFF3D6] animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-32 rounded bg-[#F5E5B0] animate-pulse" />
+                <div className="h-3 w-48 rounded bg-[#FFF7E2] animate-pulse" />
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="space-y-2 rounded-2xl bg-[#FFFDF5] p-3 border border-[#F5E5B0]">
+                  <div className="h-3 w-20 rounded bg-[#F5E5B0] animate-pulse" />
+                  <div className="h-3 w-full rounded bg-[#FFF7E2] animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl border border-[#F5E5B0] bg-white p-4 text-sm text-[#8B6525]">
+            <LoaderCircle size={16} className="animate-spin text-[#C96800]" />
+            Fetching the profile details…
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (error) return <div className="p-4 text-red-600">{error}</div>;
   if (!person) return <div className="p-4">Person not found.</div>;
 
