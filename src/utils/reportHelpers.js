@@ -59,6 +59,5 @@ function sortRanking(countMap) {
 export function topN(ranking, n = 5) {
   // Return all items with rank <= n (includes all tied at rank n)
   if (ranking.length === 0) return [];
-  const maxRank = ranking[n - 1]?.rank ?? n;
-  return ranking.filter((r) => r.rank <= maxRank);
+  return ranking.filter((r) => r.rank <= n);
 }
