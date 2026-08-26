@@ -1,6 +1,7 @@
-﻿import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronDown, Plus, RefreshCw, Search, X } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { RefreshCw, Plus, ChevronDown } from "lucide-react-native";
 import { useSheets } from "../hooks/useSheets";
 import { useAuth } from "../context/AuthContext";
 import { PERMISSIONS } from "../config/sheets";
@@ -8,6 +9,8 @@ import { getMonthKey, getMonthLabel } from "../utils/formatters";
 import { calcMonthStats, calcYearlyStats, topN } from "../utils/reportHelpers";
 import SettingsModal from "../components/SettingsModal";
 import Medal from "../components/Medal";
+import tw from "twrnc";
+
 import logo from "../assets/VSG Logo.jpeg";
 import sadhviji from "../assets/SadhvijiMs.png";
 import sadhu from "../assets/SadhuMs.png";
@@ -15,27 +18,22 @@ import road from "../assets/TotalKm.jpg";
 import number from "../assets/TotalVihar.png";
 
 export default function Dashboard() {
-  const { entries, config, loading, syncAll, scriptUrl, saveScriptUrl } =
-    useSheets();
+  const { entries, config, loading, syncAll, scriptUrl, saveScriptUrl } = useSheets();
   const { fullName, role } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigation = useNavigation();
+  const route = useRoute();
   const [showSettings, setShowSettings] = useState(false);
-  const [openRankingPanel, setOpenRankingPanel] = useState("sevak");
-  const [rankingSearch, setRankingSearch] = useState("");
   const [activeView, setActiveView] = useState("month");
-  const didInitOpenPanel = useRef(false);
 
   useEffect(() => {
     syncAll();
   }, [syncAll]);
 
   useEffect(() => {
-    const tab = new URLSearchParams(location.search).get("tab");
-    if (tab === "annual") {
+    if (route.params?.tab === "annual") {
       setActiveView("annual");
     }
-  }, [location.search]);
+  }, [route.params?.tab]);
 
   const currentMonthKey = getMonthKey(new Date().toISOString().slice(0, 10));
   const currentMonthEntries = entries.filter(
@@ -43,8 +41,8 @@ export default function Dashboard() {
   );
   const stats = calcMonthStats(currentMonthEntries);
   const monthLabel = getMonthLabel(new Date().toISOString().slice(0, 10));
-  const yearLabel =
-    config?.appConfig?.current_year_label || new Date().getFullYear();
+  const yearLabel = config?.appConfig?.current_year_label || new Date().getFullYear();
+  
   const yearly = calcYearlyStats(entries);
   const yearlySevakTop = topN(withDenseRanks(yearly.sevakRanking), 3);
   const yearlySevikaTop = topN(withDenseRanks(yearly.sevikaRanking), 3);
@@ -52,162 +50,83 @@ export default function Dashboard() {
     (month) => month.key !== currentMonthKey,
   );
 
-  const hasSevakRanking = stats.sevakRanking.length > 0;
-  const hasSevikaRanking = stats.sevikaRanking.length > 0;
-  const rankingQuery = rankingSearch.trim().toLowerCase();
-  const sevakList = rankingQuery
-    ? stats.sevakRanking.filter((r) =>
-        (r?.name || "").toLowerCase().includes(rankingQuery),
-      )
-    : stats.sevakRanking;
-  const sevikaList = rankingQuery
-    ? stats.sevikaRanking.filter((r) =>
-        (r?.name || "").toLowerCase().includes(rankingQuery),
-      )
-    : stats.sevikaRanking;
-  const hasSevakVisible = sevakList.length > 0;
-  const hasSevikaVisible = sevikaList.length > 0;
-  const forceOpenRankings = Boolean(rankingQuery);
-
-  useEffect(() => {
-    if (forceOpenRankings) return;
-    const anyVisible = hasSevakVisible || hasSevikaVisible;
-    if (!anyVisible) {
-      if (openRankingPanel !== null) setOpenRankingPanel(null);
-      return;
-    }
-
-    if (!didInitOpenPanel.current) {
-      didInitOpenPanel.current = true;
-      setOpenRankingPanel(hasSevakVisible ? "sevak" : "sevika");
-      return;
-    }
-
-    if (openRankingPanel === "sevak" && !hasSevakVisible && hasSevikaVisible) {
-      setOpenRankingPanel("sevika");
-    }
-    if (openRankingPanel === "sevika" && !hasSevikaVisible && hasSevakVisible) {
-      setOpenRankingPanel("sevak");
-    }
-  }, [forceOpenRankings, hasSevakVisible, hasSevikaVisible, openRankingPanel]);
-
   return (
-    <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">
-      {/*<header className="flex items-stretch justify-between bg-white shadow-sm border border-slate-100 overflow-hidden w-full">
-        <div className="relative flex items-center gap-2 sm:gap-3 pl-3 sm:pl-4 pr-8 sm:pr-10 py-2 sm:py-2.5 flex-1 min-w-[175px] sm:min-w-[230px] flex-shrink-0">
-          <div
-            className="absolute inset-y-0 left-0 bg-[#C96800] w-[calc(60%+95px)] z-0"
-            style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 40px) 100%, 0 100%)" }}
+    <View style={tw`flex-1 bg-[#FFFDF5]`}>
+      {/* Header */}
+      <View style={tw`flex-row items-center justify-between px-4 pt-12 pb-3 bg-[#C96800]`}>
+        <View style={tw`flex-row items-center gap-2.5 flex-1`}>
+          <Image
+            source={logo}
+            style={tw`w-10 h-10 rounded-full border-2 border-orange-300`}
+            resizeMode="cover"
           />
-          <div className="relative z-10 flex items-center gap-1.5 sm:gap-3 w-full min-w-0">
-            <div className="flex-shrink-0 w-8 h-8 sm:w-11 sm:h-11 rounded-full border border-orange-300/40 p-0.5 flex items-center justify-center bg-white shadow-sm">
-              <img
-                src={logo}
-                alt="VSG Logo"
-                className="w-10 h-10 sm:w-10 sm:h-10 rounded-full object-cover"
-              />
-            </div>
-            <div className="min-w-0 flex-1 flex flex-col justify-center text-white">
-              <h1 className="font-bold text-xs sm:text-sm md:text-base leading-none whitespace-nowrap">
-                Vihar Seva Group
-              </h1>
-              <p className="text-amber-200 font-bold text-[10px] sm:text-[11px] leading-none mt-1 whitespace-nowrap">
-                VSG - Gandhinagar
-              </p>
-              <p className="text-white/80 text-[9px] sm:text-[10px] font-semibold leading-none mt-1 whitespace-nowrap flex items-center gap-0.5">
-                Welcome, {fullName} <span className="text-xs">👋</span>
-              </p>
-            </div>
-          </div>
-        </div>
+          <View style={tw`flex-1`}>
+            <Text style={tw`text-white font-black text-sm`}>Vihar Seva Group</Text>
+            <Text style={tw`text-orange-200 text-[10px] font-bold`}>VSG - Gandhinagar</Text>
+            <Text style={tw`text-orange-100 text-[10px] font-semibold`}>Welcome, {fullName}</Text>
+          </View>
+        </View>
 
-        <div className="relative z-10 flex items-center gap-1.5 sm:gap-3 pl-1 pr-2.5 sm:px-4 py-2 bg-white flex-shrink-0">
-          <div className="flex items-center justify-center border border-slate-200/80 rounded-lg w-10 h-10 sm:w-10 sm:h-10 bg-white shadow-sm flex-shrink-0">
-            <button
-              onClick={syncAll}
-              className="flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-orange-600 transition-colors duration-200"
-              title="Sync"
-            >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              <span className="text-[7px] sm:text-[7px] font-bold text-slate-500">Refresh</span>
-            </button>
-          </div>
-          <div className="w-[1px] h-6 sm:h-7 bg-slate-200 mx-0.5 self-center flex-shrink-0" />
+        <View style={tw`flex-row items-center gap-2`}>
+          <TouchableOpacity
+            onPress={() => setShowSettings(true)}
+            style={tw`p-2 bg-orange-700 rounded-xl`}
+          >
+            <Text style={tw`text-white text-xs font-bold`}>⚙️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={syncAll}
+            style={tw`p-2 bg-orange-700 rounded-xl`}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <RefreshCw size={18} color="white" />
+            )}
+          </TouchableOpacity>
           {PERMISSIONS.canAddEntry(role) && (
-            <Link
-              to="/add"
-              className="flex items-center gap-1 bg-[#C96800] text-white font-bold text-[10px] sm:text-xs px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg flex-shrink-0 hover:bg-orange-50 hover:text-[#C96800] transition-all duration-200 shadow-sm whitespace-nowrap"
+            <TouchableOpacity
+              onPress={() => navigation.navigate("AddEntry")}
+              style={tw`flex-row items-center gap-1 bg-white px-2.5 py-2 rounded-xl`}
             >
-              <Plus size={12} sm={14} />
-              Add New Report
-            </Link>
+              <Plus size={12} color="#C96800" />
+              <Text style={tw`text-[#C96800] font-bold text-xs`}>Add Report</Text>
+            </TouchableOpacity>
           )}
-        </div>
-      </header>*/}
+        </View>
+      </View>
 
-      <header className="flex items-center gap-2.5 px-4 pt-4 pb-3 bg-[#C96800]">
-        <img
-          src={logo}
-          alt="VSG Logo"
-          className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-orange-300"
-        />
-        <div className="flex-1 min-w-0">
-          <h1 className="text-white font-black text-sm leading-none truncate">
-            Vihar Seva Group
-          </h1>
-          <p className="text-orange-200 text-[10px] font-bold leading-none mt-0.5 truncate">
-            VSG - Gandhinagar
-          </p>
-          <p className="text-orange-100 text-[10px] font-semibold leading-none mt-0.5 truncate">
-            Welcome, {fullName}
-          </p>
-        </div>
-
-        {/* Setting Icon Excel Sheet sync */}
-        {/* <button onClick={() => setShowSettings(true)} className="text-white p-2 rounded-xl hover:bg-orange-700" title="Settings">
-          <Settings size={18} />
-        </button> */}
-
-        <button
-          onClick={syncAll}
-          className="text-white p-2 rounded-xl hover:bg-orange-700"
-          title="Sync"
-        >
-          <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-        </button>
-        <Link
-          to="/add"
-          className="flex items-center gap-1 bg-white text-[#C96800] font-bold text-xs px-2.5 py-2 rounded-xl flex-shrink-0 whitespace-nowrap"
-        >
-          Add New Report
-        </Link>
-      </header>
-
-      <div className="px-4 pt-4">
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          {["month", "annual"].map((view) => (
-            <button
-              key={view}
-              type="button"
-              onClick={() => setActiveView(view)}
-              className={`rounded-2xl border px-4 py-3 text-sm font-bold transition-all ${
-                activeView === view
-                  ? "bg-[#C96800] text-white border-[#C96800]"
-                  : "bg-white text-[#8B6525] border-[#E8C97A] hover:bg-[#FFF3D5]"
+      {/* Tab Switcher */}
+      <View style={tw`px-4 pt-4 flex-row gap-2`}>
+        {["month", "annual"].map((view) => (
+          <TouchableOpacity
+            key={view}
+            onPress={() => setActiveView(view)}
+            style={tw`flex-1 rounded-2xl border px-4 py-3 items-center ${
+              activeView === view
+                ? "bg-[#C96800] border-[#C96800]"
+                : "bg-white border-[#E8C97A]"
+            }`}
+          >
+            <Text
+              style={tw`text-sm font-bold ${
+                activeView === view ? "text-white" : "text-[#8B6525]"
               }`}
             >
               {view === "month" ? "Monthly Report" : "Annual Report"}
-            </button>
-          ))}
-        </div>
-      </div>
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-      <div className="scroll-area px-4 pb-24 space-y-4">
-        <h2 className="font-black text-[#3D1F00] text-base">
+      {/* Content */}
+      <ScrollView style={tw`flex-1 px-4 mt-4`} contentContainerStyle={tw`pb-24`}>
+        <Text style={tw`font-black text-[#3D1F00] text-base mb-3`}>
           {activeView === "month" ? monthLabel : `Annual Report ${yearLabel}`}
-        </h2>
+        </Text>
 
-        <div className="grid grid-cols-2 gap-3">
+        {/* Stats Grid */}
+        <View style={tw`flex-row gap-3 mb-3`}>
           <StatCard
             label="Total Vihar"
             value={activeView === "month" ? stats.total : yearly.total}
@@ -220,9 +139,8 @@ export default function Dashboard() {
             color="#1B7A3A"
             image={road}
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
+        </View>
+        <View style={tw`flex-row gap-3 mb-4`}>
           <StatCard
             label="Sadhu Bhagvant"
             value={activeView === "month" ? stats.sadhu : yearly.sadhu}
@@ -235,133 +153,74 @@ export default function Dashboard() {
             image={sadhviji}
             color="#1B7A3A"
           />
-        </div>
+        </View>
 
         {activeView === "month" ? (
           <>
             {previousMonths.length > 0 ? (
-              <div className="bg-white border border-[#F5E5B0] rounded-2xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-[#F5E5B0] bg-[#FFFDF5]">
-                  <p className="font-black text-sm text-[#3D1F00]">
-                    Month-Wise Report
-                  </p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-[#FFF3D6]">
-                        <th className="text-left px-5 py-2 font-black text-[#8B6525] text-center">
-                          Month
-                        </th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
-                          Total Vihar
-                        </th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
-                          Total Distance (KM)
-                        </th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
-                          Total Sadhu Bhagvant
-                        </th>
-                        <th className="px-1 py-2 font-black text-[#8B6525] text-center">
-                          Total Sadhviji Bhagvant
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previousMonths.map((month) => (
-                        <tr
-                          key={month.key}
-                          className="border-t border-[#F5E5B0]"
-                        >
-                          <td className="px-3 py-2.5 font-semibold font-bold text-[#C96800] whitespace-nowrap">
-                            {month.label}
-                          </td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
-                            {month.total}
-                          </td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
-                            {month.km}
-                          </td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
-                            {month.sadhu}
-                          </td>
-                          <td className="px-3 py-2.5 text-center font-bold text-[#1B7A3A]">
-                            {month.sadhviji}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <View style={tw`bg-white border border-[#F5E5B0] rounded-2xl overflow-hidden mb-4`}>
+                <View style={tw`px-4 py-3 border-b border-[#F5E5B0] bg-[#FFFDF5]`}>
+                  <Text style={tw`font-black text-sm text-[#3D1F00]`}>Month-Wise Report</Text>
+                </View>
+                
+                {/* Custom Table Head */}
+                <View style={tw`flex-row bg-[#FFF3D6] px-4 py-2`}>
+                  <Text style={tw`flex-2 font-black text-[#8B6525] text-xs`}>Month</Text>
+                  <Text style={tw`flex-1 font-black text-[#8B6525] text-xs text-center`}>Vihar</Text>
+                  <Text style={tw`flex-1 font-black text-[#8B6525] text-xs text-center`}>KM</Text>
+                  <Text style={tw`flex-1 font-black text-[#8B6525] text-xs text-center`}>Sadhu</Text>
+                  <Text style={tw`flex-1 font-black text-[#8B6525] text-xs text-center`}>Sadhviji</Text>
+                </View>
+
+                {/* Custom Table Body */}
+                {previousMonths.map((month) => (
+                  <View key={month.key} style={tw`flex-row border-t border-[#F5E5B0] px-4 py-3 items-center`}>
+                    <Text style={tw`flex-2 font-bold text-[#C96800] text-xs`}>{month.label}</Text>
+                    <Text style={tw`flex-1 font-bold text-[#1B7A3A] text-xs text-center`}>{month.total}</Text>
+                    <Text style={tw`flex-1 font-bold text-[#1B7A3A] text-xs text-center`}>{month.km}</Text>
+                    <Text style={tw`flex-1 font-bold text-[#1B7A3A] text-xs text-center`}>{month.sadhu}</Text>
+                    <Text style={tw`flex-1 font-bold text-[#1B7A3A] text-xs text-center`}>{month.sadhviji}</Text>
+                  </View>
+                ))}
+              </View>
             ) : (
-              <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 text-[#8B6525] text-sm">
-                Previous month totals will appear here once the next month
-                begins.
-              </div>
+              <View style={tw`bg-white border border-[#F5E5B0] rounded-2xl p-4 mb-4`}>
+                <Text style={tw`text-[#8B6525] text-sm`}>
+                  Previous month totals will appear here once the next month begins.
+                </Text>
+              </View>
             )}
 
             {currentMonthEntries.length === 0 && !loading && (
-              <div className="text-center py-12">
-                <p className="text-[#8B6525] font-semibold text-sm">
+              <View style={tw`items-center py-12`}>
+                <Text style={tw`text-[#8B6525] font-semibold text-sm`}>
                   No entries for {monthLabel} yet.
-                </p>
-                {!scriptUrl && (
-                  <button
-                    onClick={() => setShowSettings(true)}
-                    className="mt-3 text-xs font-bold text-[#C96800] border border-[#C96800] rounded-xl px-4 py-2"
-                  >
-                    ⚙️ Connect Google Sheets
-                  </button>
-                )}
-              </div>
+                </Text>
+              </View>
             )}
           </>
         ) : (
           <>
             {entries.length === 0 && !loading ? (
-              <div className="text-center py-12">
-                <p className="text-[#8B6525] font-semibold text-sm">
+              <View style={tw`items-center py-12`}>
+                <Text style={tw`text-[#8B6525] font-semibold text-sm`}>
                   No data yet for {yearLabel}.
-                </p>
-                {!scriptUrl && (
-                  <button
-                    onClick={() => setShowSettings(true)}
-                    className="mt-3 text-xs font-bold text-[#C96800] border border-[#C96800] rounded-xl px-4 py-2"
-                  >
-                    ⚙️ Connect Google Sheets
-                  </button>
-                )}
-              </div>
+                </Text>
+              </View>
             ) : (
-              <>
+              <View style={tw`gap-4`}>
                 {yearlySevakTop.length > 0 && (
-                  <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="font-black text-sm text-[#C96800]">
-                        Top 3 Vihar Sevak
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => navigate("/rankings?type=sevak")}
-                        className="text-xs font-bold text-[#C96800] bg-white border border-[#E8C97A] rounded-xl px-3 py-1 hover:bg-[#FFF3D5]"
+                  <View style={tw`bg-white border border-[#F5E5B0] rounded-2xl p-4`}>
+                    <View style={tw`flex-row items-center justify-between mb-3`}>
+                      <Text style={tw`font-black text-sm text-[#C96800]`}>Top 3 Vihar Sevak</Text>
+                      <TouchableOpacity
+                        onPress={() => navigation.navigate("Rankings", { type: "sevak" })}
+                        style={tw`border border-[#E8C97A] rounded-xl px-3 py-1 bg-white`}
                       >
-                        View all
-                      </button>
-                    </div>
-                    <div
-                      className="space-y-2"
-                      style={
-                        yearlySevakTop.length > 3
-                          ? {
-                              maxHeight: "200px",
-                              overflowY: "auto",
-                              overflowX: "hidden",
-                              paddingRight: "4px",
-                            }
-                          : {}
-                      }
-                    >
+                        <Text style={tw`text-xs font-bold text-[#C96800]`}>View all</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={tw`gap-2`}>
                       {yearlySevakTop.map((record) => (
                         <Medal
                           key={record.name}
@@ -371,37 +230,22 @@ export default function Dashboard() {
                           color="#1B7A3A"
                         />
                       ))}
-                    </div>
-                  </div>
+                    </View>
+                  </View>
                 )}
 
                 {yearlySevikaTop.length > 0 && (
-                  <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="font-black text-sm text-[#C96800]">
-                        Top 3 Vihar Sevika
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => navigate("/rankings?type=sevika")}
-                        className="text-xs font-bold text-[#C96800] bg-white border border-[#E8C97A] rounded-xl px-3 py-1 hover:bg-[#FFF3D5]"
+                  <View style={tw`bg-white border border-[#F5E5B0] rounded-2xl p-4`}>
+                    <View style={tw`flex-row items-center justify-between mb-3`}>
+                      <Text style={tw`font-black text-sm text-[#C96800]`}>Top 3 Vihar Sevika</Text>
+                      <TouchableOpacity
+                        onPress={() => navigation.navigate("Rankings", { type: "sevika" })}
+                        style={tw`border border-[#E8C97A] rounded-xl px-3 py-1 bg-white`}
                       >
-                        View all
-                      </button>
-                    </div>
-                    <div
-                      className="space-y-2"
-                      style={
-                        yearlySevikaTop.length > 3
-                          ? {
-                              maxHeight: "200px",
-                              overflowY: "auto",
-                              overflowX: "hidden",
-                              paddingRight: "4px",
-                            }
-                          : {}
-                      }
-                    >
+                        <Text style={tw`text-xs font-bold text-[#C96800]`}>View all</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={tw`gap-2`}>
                       {yearlySevikaTop.map((record) => (
                         <Medal
                           key={record.name}
@@ -411,99 +255,35 @@ export default function Dashboard() {
                           color="#1B7A3A"
                         />
                       ))}
-                    </div>
-                  </div>
+                    </View>
+                  </View>
                 )}
-              </>
+              </View>
             )}
           </>
         )}
-      </div>
-    </div>
+      </ScrollView>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        visible={showSettings}
+        currentUrl={scriptUrl}
+        onSave={saveScriptUrl}
+        onClose={() => setShowSettings(false)}
+      />
+    </View>
   );
 }
 
 function StatCard({ label, value, color, image }) {
   return (
-    <div className="bg-white border border-[#F5E5B0] rounded-xl px-3 py-2 flex items-center gap-3">
-      <div>
-        <img src={image} alt="" className="w-12 h-15 object-contain" />
-      </div>
-      <div className="flex flex-col">
-        <span className="text-sm font-bold text-[#C96800] leading-tight">
-          {label}
-        </span>
-        <span className="font-black text-xl" style={{ color }}>
-          {value}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  color,
-  children,
-  collapsible = false,
-  isOpen = true,
-  onToggle,
-}) {
-  return (
-    <div className="bg-white border border-[#F5E5B0] rounded-2xl overflow-hidden">
-      {collapsible ? (
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={isOpen}
-          className="w-full px-4 py-2.5 border-b border-[#F5E5B0] bg-[#FFFDF5] flex items-center justify-between gap-3 text-left"
-          style={{
-            backgroundColor: color + "18",
-            borderLeft: `4px solid ${color}`,
-          }}
-        >
-          <span className="font-black text-sm" style={{ color }}>
-            {title}
-          </span>
-          <ChevronDown
-            size={18}
-            className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
-            style={{ color }}
-          />
-        </button>
-      ) : (
-        <div
-          className="px-4 py-2.5 border-b border-[#F5E5B0] bg-[#FFFDF5]"
-          style={{
-            backgroundColor: color + "18",
-            borderLeft: `4px solid ${color}`,
-          }}
-        >
-          <p className="font-black text-sm" style={{ color }}>
-            {title}
-          </p>
-        </div>
-      )}
-      {(!collapsible || isOpen) && (
-        <div className="px-4 py-2 divide-y divide-[#F5E5B0]">{children}</div>
-      )}
-    </div>
-  );
-}
-
-function RankRow({ rank, name, count, color }) {
-  return (
-    <div className="flex items-center gap-3 py-2.5">
-      <span className="text-xs font-black text-[#8B6525] w-5 text-center">
-        {rank}.
-      </span>
-      <span className="flex-1 text-sm font-semibold text-[#3D1F00]">
-        {name}
-      </span>
-      <span className="text-sm font-black" style={{ color }}>
-        {count}
-      </span>
-    </div>
+    <View style={tw`flex-1 bg-white border border-[#F5E5B0] rounded-xl px-3 py-2.5 flex-row items-center gap-3`}>
+      <Image source={image} style={tw`w-12 h-12`} resizeMode="contain" />
+      <View style={tw`flex-1`}>
+        <Text style={tw`text-xs font-bold text-[#C96800] leading-tight`}>{label}</Text>
+        <Text style={[tw`font-black text-base mt-0.5`, { color }]}>{value}</Text>
+      </View>
+    </View>
   );
 }
 

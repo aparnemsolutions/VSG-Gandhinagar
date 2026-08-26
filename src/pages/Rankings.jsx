@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { Search, X, ArrowLeft } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, Text, TextInput, ScrollView, TouchableOpacity } from "react-native";
+import { Search, X, ArrowLeft } from "lucide-react-native";
 import { useSheets } from "../hooks/useSheets";
 import { calcYearlyStats } from "../utils/reportHelpers";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import tw from "twrnc";
 
 function withDenseRanks(ranking) {
   let prevCount = null;
@@ -14,16 +16,19 @@ function withDenseRanks(ranking) {
   });
 }
 
-function RankRow({ name, count, color = "#1B7A3A" }) {
+function RankRow({ rank, name, count, color = "#1B7A3A" }) {
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-[#F5E5B0]">
-      <span className="flex-1 text-sm font-semibold text-[#3D1F00]">
+    <View style={tw`flex-row items-center gap-3 py-3 border-b border-[#F5E5B0]`}>
+      <Text style={tw`text-xs font-black text-[#8B6525] w-5 text-center`}>
+        {rank}.
+      </Text>
+      <Text style={tw`flex-1 text-sm font-semibold text-[#3D1F00]`}>
         {name}
-      </span>
-      <span className="text-sm font-black" style={{ color }}>
+      </Text>
+      <Text style={[tw`text-sm font-black`, { color }]}>
         {count}
-      </span>
-    </div>
+      </Text>
+    </View>
   );
 }
 
@@ -31,20 +36,16 @@ export default function Rankings() {
   const { entries, config, syncAll } = useSheets();
   const [search, setSearch] = useState("");
 
-  const location = useLocation();
-  const navigate = useNavigate();
+  const route = useRoute();
+  const navigation = useNavigation();
+
   useEffect(() => {
     syncAll();
   }, [syncAll]);
 
-  const params = useMemo(
-    () => new URLSearchParams(location.search),
-    [location.search],
-  );
-  const typeFilter = params.get("type"); // 'sevak' | 'sevika' | null
+  const typeFilter = route.params?.type; // 'sevak' | 'sevika' | null
 
-  const yearLabel =
-    config?.appConfig?.current_year_label || new Date().getFullYear();
+  const yearLabel = config?.appConfig?.current_year_label || new Date().getFullYear();
   const yearly = calcYearlyStats(entries || []);
 
   const sevakRanking = useMemo(
@@ -65,62 +66,50 @@ export default function Rankings() {
     : sevikaRanking;
 
   return (
-    <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">
-      <header className="px-3 pt-3 pb-2 bg-[#C96800]">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate("/?tab=annual")}
-            className="text-white p-2 rounded-lg hover:bg-orange-700"
-            title="Back"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-white font-black text-sm truncate">
-              All Vihar Sevak & Sevika List
-            </h1>
-            <p className="text-orange-100 text-[11px] font-semibold truncate">
-              {yearLabel}
-            </p>
-          </div>
-        </div>
-      </header>
+    <View style={tw`flex-1 bg-[#FFFDF5]`}>
+      <View style={tw`flex-row items-center gap-2 px-3 pt-12 pb-2 bg-[#C96800]`}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Tabs", { screen: "DashboardTab", params: { tab: "annual" } })}
+          style={tw`text-white p-2 rounded-lg`}
+        >
+          <ArrowLeft size={18} color="white" />
+        </TouchableOpacity>
+        <View style={tw`flex-1`}>
+          <Text style={tw`text-white font-black text-sm`}>
+            All Vihar Sevak & Sevika List
+          </Text>
+          <Text style={tw`text-orange-100 text-[11px] font-semibold`}>
+            {yearLabel}
+          </Text>
+        </View>
+      </View>
 
-      <div className="sticky top-0 z-20 px-4 pt-3 pb-3">
-        <div className="rounded-2xl border border-[#E8C97A] px-3 py-2 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2">
-            <Search size={18} className="text-[#C96800] flex-shrink-0" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search your name"
-              className="flex-1 bg-transparent placeholder:text-[#8B6525] text-sm text-[#3D1F00] outline-none"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="text-[#C96800] p-2 rounded-md hover:bg-[#FFF3D6]"
-                title="Clear"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <View style={tw`px-4 pt-3 pb-3`}>
+        <View style={tw`flex-row items-center gap-2 rounded-2xl border border-[#E8C97A] px-3 py-1.5 bg-[#FFFDF5]`}>
+          <Search size={18} color="#C96800" />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search your name"
+            placeholderTextColor="#8B6525"
+            style={tw`flex-1 text-sm text-[#3D1F00]`}
+          />
+          {search ? (
+            <TouchableOpacity onPress={() => setSearch("")} style={tw`p-1`}>
+              <X size={16} color="#C96800" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </View>
 
-      <div className="scroll-area px-4 pt-2 pb-24 space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+      <ScrollView style={tw`flex-1 px-4 pt-2`} contentContainerStyle={tw`pb-24`}>
+        <View style={tw`flex-row gap-3`}>
           {(!typeFilter || typeFilter === "sevak") && (
-            <div
-              className={`bg-white border border-[#F5E5B0] rounded-2xl p-4 ${typeFilter === "sevak" ? "col-span-2" : ""}`}
-            >
-              <p className="font-black text-sm text-[#C96800] mb-3">
+            <View style={tw`flex-1 bg-white border border-[#F5E5B0] rounded-2xl p-4`}>
+              <Text style={tw`font-black text-sm text-[#C96800] mb-3`}>
                 All Vihar Sevak
-              </p>
-              <div className="space-y-1">
+              </Text>
+              <View style={tw`gap-1`}>
                 {filteredSevak.map((r) => (
                   <RankRow
                     key={`sevak-${r.name}`}
@@ -129,18 +118,16 @@ export default function Rankings() {
                     count={r.count}
                   />
                 ))}
-              </div>
-            </div>
+              </View>
+            </View>
           )}
 
           {(!typeFilter || typeFilter === "sevika") && (
-            <div
-              className={`bg-white border border-[#F5E5B0] rounded-2xl p-4 ${typeFilter === "sevika" ? "col-span-2" : ""}`}
-            >
-              <p className="font-black text-sm text-[#C96800] mb-3">
+            <View style={tw`flex-1 bg-white border border-[#F5E5B0] rounded-2xl p-4`}>
+              <Text style={tw`font-black text-sm text-[#C96800] mb-3`}>
                 All Vihar Sevika
-              </p>
-              <div className="space-y-1">
+              </Text>
+              <View style={tw`gap-1`}>
                 {filteredSevika.map((r) => (
                   <RankRow
                     key={`sevika-${r.name}`}
@@ -149,11 +136,11 @@ export default function Rankings() {
                     count={r.count}
                   />
                 ))}
-              </div>
-            </div>
+              </View>
+            </View>
           )}
-        </div>
-      </div>
-    </div>
+        </View>
+      </ScrollView>
+    </View>
   );
 }

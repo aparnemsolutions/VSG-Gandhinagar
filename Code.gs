@@ -291,6 +291,7 @@ function login(username, password) {
   const rCol = headers.indexOf('Role');
   const nCol = headers.indexOf('Full Name');
   const aCol = headers.indexOf('Active');
+  const eCol = headers.indexOf('Email');
 
   const hashed = hashSHA256(password);
 
@@ -299,7 +300,16 @@ function login(username, password) {
     if (String(r[uCol]).toLowerCase() === username.toLowerCase() &&
         r[pCol] === hashed &&
         r[aCol] !== false && r[aCol] !== 'FALSE') {
-      return { success: true, username: r[uCol], role: r[rCol], fullName: r[nCol] };
+      const email = eCol !== -1 ? String(r[eCol] || '').trim() : '';
+      const { token: sessionToken, expires } = createSessionForEmail_(email || r[uCol]);
+      return {
+        success: true,
+        username: r[uCol],
+        role: r[rCol],
+        fullName: r[nCol],
+        sessionToken,
+        expires,
+      };
     }
   }
   return { error: 'Invalid username or password' };

@@ -1,22 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getScriptUrl, setScriptUrl } from '../config/sheets';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getScriptUrl, setScriptUrl, getSessionToken } from '../config/sheets';
 
 const ENTRIES_KEY = 'vsg-entries-v5';
 const CONFIG_KEY = 'vsg-config-v1';
-const SESSION_KEY = 'vsg-google-session-v1';
 
-function getIdToken() {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return '';
-    const s = JSON.parse(raw);
-    return s?.sessionToken || s?.idToken || '';
-  } catch {
-    return '';
-  }
-}
-
-function api(params) {
+async function api(params) {
   const url = getScriptUrl();
   if (!url) return Promise.reject(new Error('No script URL configured'));
   const qs = new URLSearchParams(params).toString();
@@ -47,17 +36,29 @@ function api(params) {
 }
 
 export function useSheets() {
-  const [entries, setEntries] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(ENTRIES_KEY)) || []; }
-    catch { return []; }
-  });
-  const [config, setConfig] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; }
-    catch { return {}; }
-  });
-  const [loading, setLoading] = useState(false);
+  const [entries, setEntries] = useState([]);
+  const [config, setConfig] = useState({});
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [scriptUrl, setScriptUrlState] = useState(getScriptUrl);
+  const [scriptUrl, setScriptUrlState] = useState(getScriptUrl());
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    async function loadCache() {
+      try {
+        const storedEntries = await AsyncStorage.getItem(ENTRIES_KEY);
+        const storedConfig = await AsyncStorage.getItem(CONFIG_KEY);
+        if (storedEntries) setEntries(JSON.parse(storedEntries));
+        if (storedConfig) setConfig(JSON.parse(storedConfig));
+      } catch (e) {
+        console.error('Failed to load useSheets cache', e);
+      } finally {
+        setInitialized(false); // set true after first load
+        setLoading(false);
+      }
+    }
+    loadCache();
+  }, []);
 
   const syncEntries = useCallback(async () => {
     if (!getScriptUrl()) return;
@@ -67,7 +68,7 @@ export function useSheets() {
       const data = await api({ action: 'getAll' });
       const list = Array.isArray(data) ? data : (data.data || []);
       setEntries(list);
-      localStorage.setItem(ENTRIES_KEY, JSON.stringify(list));
+      await AsyncStorage.setItem(ENTRIES_KEY, JSON.stringify(list));
       return list;
     } catch (e) {
       setError(e.message);
@@ -82,7 +83,7 @@ export function useSheets() {
     try {
       const data = await api({ action: 'getConfig' });
       setConfig(data);
-      localStorage.setItem(CONFIG_KEY, JSON.stringify(data));
+      await AsyncStorage.setItem(CONFIG_KEY, JSON.stringify(data));
     } catch { /* keep cached */ }
   }, []);
 
@@ -102,28 +103,37 @@ export function useSheets() {
   }, [scriptUrl]);
 
   const saveEntry = useCallback(async (entry) => {
-    const data = await api({ action: 'save', data: JSON.stringify(entry), sessionToken: getIdToken() });
+    const data = await api({
+      action: 'save',
+      data: JSON.stringify(entry),
+      sessionToken: getSessionToken(),
+    });
     if (data?.error) throw new Error(data.error);
     const canonical = data?.viharNo ? { ...entry, viharNo: data.viharNo } : entry;
-    // Update local cache directly — avoids a second getAll round-trip after every save
+    
+    // Update local cache directly
     setEntries(prev => {
       const exists = prev.some(e => e.id === canonical.id);
       const next = exists
         ? prev.map(e => e.id === canonical.id ? canonical : e)
         : [...prev, canonical];
-      localStorage.setItem(ENTRIES_KEY, JSON.stringify(next));
+      AsyncStorage.setItem(ENTRIES_KEY, JSON.stringify(next)).catch(() => {});
       return next;
     });
     return data;
   }, []);
 
   const deleteEntry = useCallback(async (id) => {
-    await api({ action: 'delete', id, sessionToken: getIdToken() });
+    await api({
+      action: 'delete',
+      id,
+      sessionToken: getSessionToken(),
+    });
     await syncEntries();
   }, [syncEntries]);
 
-  const saveScriptUrl = useCallback((url) => {
-    setScriptUrl(url);
+  const saveScriptUrl = useCallback(async (url) => {
+    await setScriptUrl(url);
     setScriptUrlState(url);
   }, []);
 

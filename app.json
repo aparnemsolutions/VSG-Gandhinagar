@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "VSG Vihar Seva",
+    "slug": "vsg-vihar-seva",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/VSG Logo.jpeg",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./src/assets/VSG Logo.jpeg",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFDF5"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vsg.viharseva"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/VSG Logo.jpeg",
+        "backgroundColor": "#FFFDF5"
+      },
+      "package": "com.vsg.viharseva"
+    },
+    "web": {
+      "favicon": "./public/favicon.svg"
+    }
+  }
+}

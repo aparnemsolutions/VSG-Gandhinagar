@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { X, Link2, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { View, Text, Modal, TextInput, TouchableOpacity } from 'react-native';
+import { X, Link2, CheckCircle } from 'lucide-react-native';
+import tw from 'twrnc';
 
-export default function SettingsModal({ currentUrl, onSave, onClose }) {
+export default function SettingsModal({ currentUrl, onSave, onClose, visible }) {
   const [url, setUrl] = useState(currentUrl || '');
   const [saved, setSaved] = useState(false);
 
@@ -10,49 +12,56 @@ export default function SettingsModal({ currentUrl, onSave, onClose }) {
     if (!trimmed) return;
     onSave(trimmed);
     setSaved(true);
-    setTimeout(onClose, 1200);
+    setTimeout(() => {
+      setSaved(false);
+      onClose();
+    }, 1200);
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[150] flex items-end justify-center">
-      <div className="w-full max-w-[480px] bg-white rounded-t-2xl px-5 pt-5 pb-8 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-black text-[#3D1F00] text-base">Settings</h2>
-          <button onClick={onClose} className="p-1.5 rounded-xl text-[#8B6525] hover:bg-[#FFF3D6]">
-            <X size={20} />
-          </button>
-        </div>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={tw`flex-1 justify-end bg-black/40`}>
+        <View style={tw`bg-white rounded-t-3xl px-5 pt-5 pb-8 space-y-4`}>
+          <View style={tw`flex-row items-center justify-between mb-2`}>
+            <Text style={tw`font-black text-[#3D1F00] text-base`}>Settings</Text>
+            <TouchableOpacity onPress={onClose} style={tw`p-1.5 rounded-xl bg-[#FFF3D6]`}>
+              <X size={20} color="#8B6525" />
+            </TouchableOpacity>
+          </View>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-[#8B6525] flex items-center gap-1.5">
-            <Link2 size={13} /> Google Apps Script URL
-          </label>
-          <input
-            type="url"
-            value={url}
-            onChange={e => setUrl(e.target.value)}
-            placeholder="https://script.google.com/macros/s/…/exec"
-            className="w-full border border-[#E8C97A] rounded-xl px-3 py-2.5 text-sm bg-[#FFFDF5] focus:outline-none focus:border-[#C96800]"
-          />
-          <p className="text-[10px] text-[#8B6525]">
-            Paste the deployed Web App URL from Google Apps Script. App will sync immediately after saving.
-          </p>
-        </div>
+          <View style={tw`space-y-1.5 mb-4`}>
+            <Text style={tw`text-xs font-bold text-[#8B6525] mb-1`}>
+              Google Apps Script URL
+            </Text>
+            <TextInput
+              value={url}
+              onChangeText={setUrl}
+              placeholder="https://script.google.com/macros/s/…/exec"
+              placeholderTextColor="#8B6525"
+              autoCapitalize="none"
+              style={tw`w-full border border-[#E8C97A] rounded-xl px-3 py-2.5 text-sm bg-[#FFFDF5] text-[#3D1F00]`}
+            />
+            <Text style={tw`text-[10px] text-[#8B6525] mt-1`}>
+              Paste the deployed Web App URL from Google Apps Script. App will sync immediately after saving.
+            </Text>
+          </View>
 
-        {saved ? (
-          <div className="flex items-center justify-center gap-2 text-green-600 font-bold py-3">
-            <CheckCircle size={18} /> Saved — syncing…
-          </div>
-        ) : (
-          <button
-            onClick={handleSave}
-            disabled={!url.trim()}
-            className="w-full bg-[#C96800] text-white font-black rounded-xl py-3.5 text-sm disabled:opacity-50"
-          >
-            Save & Sync
-          </button>
-        )}
-      </div>
-    </div>
+          {saved ? (
+            <View style={tw`flex-row items-center justify-center gap-2 py-3`}>
+              <CheckCircle size={18} color="#16a34a" />
+              <Text style={tw`text-green-600 font-bold`}>Saved — syncing…</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={!url.trim()}
+              style={[tw`w-full bg-[#C96800] rounded-xl py-3.5 items-center justify-center`, !url.trim() && tw`opacity-50`]}
+            >
+              <Text style={tw`text-white font-black text-sm`}>Save & Sync</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </Modal>
   );
 }

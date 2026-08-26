@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import React, { useEffect, useState } from "react";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image } from "react-native";
+import { RefreshCw, ArrowLeft } from "lucide-react-native";
 import { useSheets } from "../hooks/useSheets";
+import { useAuth } from "../context/AuthContext";
 import { calcYearlyStats } from "../utils/reportHelpers";
+import { useNavigation } from "@react-navigation/native";
 import Medal from "../components/Medal";
-import { RefreshCw } from "lucide-react";
+import tw from "twrnc";
+
 import sadhviji from "../assets/SadhvijiMs.png";
 import sadhu from "../assets/SadhuMs.png";
 import road from "../assets/TotalKm.jpg";
@@ -12,6 +16,7 @@ import number from "../assets/TotalVihar.png";
 export default function Reports() {
   const { entries, config, loading, syncAll } = useSheets();
   const { session, ensureWriteAccess } = useAuth();
+  const navigation = useNavigation();
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
@@ -19,12 +24,11 @@ export default function Reports() {
     syncAll();
   }, []);
 
-  const yearLabel =
-    config?.appConfig?.current_year_label || new Date().getFullYear();
+  const yearLabel = config?.appConfig?.current_year_label || new Date().getFullYear();
   const yearly = calcYearlyStats(entries);
   const sevakTop = topRanks(withDenseRanks(yearly.sevakRanking), 3);
   const sevikaTop = topRanks(withDenseRanks(yearly.sevikaRanking), 3);
-  const isLoggedIn = Boolean(session?.sessionToken || session?.idToken);
+  const isLoggedIn = Boolean(session?.sessionToken);
 
   async function handleReportsLogin() {
     setLoginError('');
@@ -39,29 +43,36 @@ export default function Reports() {
   }
 
   return (
-    <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">
-      <header className="px-4 pt-4 pb-3 bg-[#C96800] flex items-center gap-3">
-        <div className="flex-1">
-          <h1 className="text-white font-black text-base">Annual Report</h1>
-          <p className="text-orange-100 text-xs font-semibold">{yearLabel}</p>
-        </div>
-        <button
-          onClick={syncAll}
-          className="text-white p-2 rounded-xl hover:bg-orange-700"
+    <View style={tw`flex-1 bg-[#FFFDF5]`}>
+      <View style={tw`flex-row items-center gap-2 px-3 pt-12 pb-2 bg-[#C96800]`}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={tw`p-2`}
         >
-          <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-        </button>
-      </header>
+          <ArrowLeft size={18} color="white" />
+        </TouchableOpacity>
+        <View style={tw`flex-1`}>
+          <Text style={tw`text-white font-black text-base`}>Annual Report</Text>
+          <Text style={tw`text-orange-100 text-xs font-semibold`}>{yearLabel}</Text>
+        </View>
+        <TouchableOpacity onPress={syncAll} style={tw`p-2`}>
+          {loading ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <RefreshCw size={18} color="white" />
+          )}
+        </TouchableOpacity>
+      </View>
 
-      <div className="scroll-area px-4 pt-4 space-y-4">
+      <ScrollView style={tw`flex-1 px-4 pt-4`} contentContainerStyle={tw`pb-24`}>
         {entries.length === 0 && !loading ? (
-          <p className="text-center text-[#8B6525] text-sm py-12">
+          <Text style={tw`text-center text-[#8B6525] text-sm py-12`}>
             No data yet for {yearLabel}.
-          </p>
+          </Text>
         ) : (
-          <>
+          <View style={tw`gap-4`}>
             {/* Summary cards */}
-            <div className="grid grid-cols-2 gap-3">
+            <View style={tw`flex-row gap-3`}>
               <YearCard
                 label="Total Vihar"
                 value={yearly.total}
@@ -74,32 +85,30 @@ export default function Reports() {
                 color="#1B7A3A"
                 image={road}
               />
+            </View>
+            <View style={tw`flex-row gap-3`}>
               <YearCard
-                label="Sadhu Bhagvant"
+                label="Sadhu"
                 value={yearly.sadhu}
-                // icon={<img src={sadhu} className="w-7 h-7 object-contain" alt="" />}
                 image={sadhu}
                 color="#1B7A3A"
               />
               <YearCard
-                label="Sadhviji Bhagvant"
+                label="Sadhviji"
                 value={yearly.sadhviji}
-                // icon={<img src={sadhviji} className="w-7 h-7 object-contain" alt="" />}
                 image={sadhviji}
                 color="#1B7A3A"
               />
-            </div>
+            </View>
 
-            {/* Month-wise breakdown */}
-
-            {/* Top 5 Sevak */}
+            {/* Top 3 Sevak */}
             {sevakTop.length > 0 && (
-              <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-3">
-                <p className="font-black text-sm text-[#C96800] mb-3">
+              <View style={tw`bg-white border border-[#F5E5B0] rounded-2xl p-4 gap-3`}>
+                <Text style={tw`font-black text-sm text-[#C96800]`}>
                   Top 3 Vihar Sevak
-                </p>
+                </Text>
                 {isLoggedIn ? (
-                  <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                  <View style={tw`gap-2`}>
                     {sevakTop.map((r) => (
                       <Medal
                         key={r.name}
@@ -109,34 +118,36 @@ export default function Reports() {
                         color="#1B7A3A"
                       />
                     ))}
-                  </div>
+                  </View>
                 ) : (
-                  <div className="rounded-2xl border border-[#F5E5B0] bg-[#FFF7E2] p-4 text-center">
-                    <p className="text-sm text-[#8B6525] mb-3">
+                  <View style={tw`rounded-2xl border border-[#F5E5B0] bg-[#FFF7E2] p-4 items-center`}>
+                    <Text style={tw`text-sm text-[#8B6525] mb-3 text-center`}>
                       Login to view Top 3 Vihar Sevak rankings.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleReportsLogin}
-                      className="inline-flex items-center justify-center rounded-xl bg-[#C96800] px-4 py-2 text-white font-bold hover:bg-[#a85000]"
+                    </Text>
+                    <TouchableOpacity
+                      onPress={handleReportsLogin}
+                      style={tw`bg-[#C96800] px-4 py-2.5 rounded-xl`}
                     >
-                      {loginLoading ? 'Signing in...' : 'Login with Google'}
-                    </button>
-                    {loginError && (
-                      <p className="mt-2 text-xs text-red-600">{loginError}</p>
-                    )}
-                  </div>
+                      <Text style={tw`text-white font-bold text-sm`}>
+                        {loginLoading ? 'Signing in...' : 'Sign In'}
+                      </Text>
+                    </TouchableOpacity>
+                    {loginError ? (
+                      <Text style={tw`mt-2 text-xs text-red-600`}>{loginError}</Text>
+                    ) : null}
+                  </View>
                 )}
-              </div>
+              </View>
             )}
 
+            {/* Top 3 Sevika */}
             {sevikaTop.length > 0 && (
-              <div className="bg-white border border-[#F5E5B0] rounded-2xl p-4 space-y-3">
-                <p className="font-black text-sm text-[#C96800] mb-3">
+              <View style={tw`bg-white border border-[#F5E5B0] rounded-2xl p-4 gap-3`}>
+                <Text style={tw`font-black text-sm text-[#C96800]`}>
                   Top 3 Vihar Sevika
-                </p>
+                </Text>
                 {isLoggedIn ? (
-                  <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                  <View style={tw`gap-2`}>
                     {sevikaTop.map((r) => (
                       <Medal
                         key={r.name}
@@ -146,63 +157,43 @@ export default function Reports() {
                         color="#1B7A3A"
                       />
                     ))}
-                  </div>
+                  </View>
                 ) : (
-                  <div className="rounded-2xl border border-[#F5E5B0] bg-[#FFF7E2] p-4 text-center">
-                    <p className="text-sm text-[#8B6525] mb-3">
+                  <View style={tw`rounded-2xl border border-[#F5E5B0] bg-[#FFF7E2] p-4 items-center`}>
+                    <Text style={tw`text-sm text-[#8B6525] mb-3 text-center`}>
                       Login to view Top 3 Vihar Sevika rankings.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleReportsLogin}
-                      className="inline-flex items-center justify-center rounded-xl bg-[#C96800] px-4 py-2 text-white font-bold hover:bg-[#a85000]"
+                    </Text>
+                    <TouchableOpacity
+                      onPress={handleReportsLogin}
+                      style={tw`bg-[#C96800] px-4 py-2.5 rounded-xl`}
                     >
-                      {loginLoading ? 'Signing in...' : 'Login with Google'}
-                    </button>
-                    {loginError && (
-                      <p className="mt-2 text-xs text-red-600">{loginError}</p>
-                    )}
-                  </div>
+                      <Text style={tw`text-white font-bold text-sm`}>
+                        {loginLoading ? 'Signing in...' : 'Sign In'}
+                      </Text>
+                    </TouchableOpacity>
+                    {loginError ? (
+                      <Text style={tw`mt-2 text-xs text-red-600`}>{loginError}</Text>
+                    ) : null}
+                  </View>
                 )}
-              </div>
+              </View>
             )}
-          </>
+          </View>
         )}
-      </div>
-    </div>
+      </ScrollView>
+    </View>
   );
 }
 
-// function YearCard({ label, value, icon, color }) {
-//   return (
-//     <div className="bg-white border border-[#F5E5B0] rounded-xl px-4 py-3 flex flex-col gap-1">
-//       <div className="flex items-start justify-between">
-//         <span className="text-xs font-bold text-[#8B6525] leading-tight">{label}</span>
-//         {icon}
-//       </div>
-//       <span className="font-black text-xl" style={{ color }}>{value}</span>
-//     </div>
-//   );
-// }
-
-function YearCard({ label, value, icon, color, image }) {
+function YearCard({ label, value, color, image }) {
   return (
-    <div className="bg-white border border-[#F5E5B0] rounded-xl px-3 py-2 flex items-center gap-3">
-      <div>
-        {/* {icon && <span>{icon}</span>} */}
-        <img src={image} alt="" className="w-12 h-15 object-contain" />
-      </div>
-
-      <div className="flex flex-col">
-        <span className="text-sm font-bold text-[#C96800] leading-tight">
-          {label}
-        </span>
-
-        <span className="font-black text-xl" style={{ color }}>
-          {value}
-        </span>
-      </div>
-    </div>
+    <View style={tw`flex-1 bg-white border border-[#F5E5B0] rounded-xl px-3 py-2.5 flex-row items-center gap-3`}>
+      <Image source={image} style={tw`w-12 h-12`} resizeMode="contain" />
+      <View style={tw`flex-1`}>
+        <Text style={tw`text-xs font-bold text-[#C96800] leading-tight`}>{label}</Text>
+        <Text style={[tw`font-black text-base mt-0.5`, { color }]}>{value}</Text>
+      </View>
+    </View>
   );
 }
 

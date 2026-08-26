@@ -1,252 +1,208 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { getScriptUrl, GOOGLE_CLIENT_ID_FALLBACK, PERMISSIONS, ROLES } from '../config/sheets';
-import GoogleWriteModal from '../components/GoogleWriteModal';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, Modal, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getScriptUrl, setSessionToken, PERMISSIONS, ROLES } from '../config/sheets';
+import tw from 'twrnc';
 
 const AuthContext = createContext(null);
-
 const SESSION_KEY = 'vsg-google-session-v1';
 
-function readSession() {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeSession(session) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
-function decodeJwtPayload(idToken) {
-  try {
-    const [, payload] = String(idToken).split('.');
-    if (!payload) return null;
-    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
-
-function isTokenValid(session) {
-  if (!session) return false;
-  if (session.sessionToken) {
-    if (!session.expires) return true;
-    const expiresAtMs = Number(new Date(session.expires).getTime());
-    return Number.isFinite(expiresAtMs) && Date.now() < expiresAtMs;
-  }
-  if (!session?.idToken) return false;
-  const payload = decodeJwtPayload(session.idToken);
-  if (!payload?.exp) return false;
-  const expiresAtMs = Number(payload.exp) * 1000;
-  return Date.now() < (expiresAtMs - 60_000);
-}
-
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(() => {
-    const existing = readSession();
-    if (existing && isTokenValid(existing)) return existing;
-    return { role: ROLES.USER, fullName: 'Guest', email: '', idToken: '', sessionToken: '', expires: '' };
+  const [session, setSession] = useState({
+    role: ROLES.ADMIN,
+    fullName: 'Admin',
+    email: 'admin@vsg.com',
+    sessionToken: 'hardcoded',
+    expires: '',
   });
   const [authReady, setAuthReady] = useState(false);
-  const [googleModalOpen, setGoogleModalOpen] = useState(false);
-  const [googleModalError, setGoogleModalError] = useState('');
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+
   const pendingAuthRef = useRef(null);
-  const gisInitializedRef = useRef(false);
 
-  const canWrite = useMemo(
-    () => isTokenValid(session) && PERMISSIONS.canAddEntry(session.role),
-    [session],
-  );
-
-  const scriptApi = useCallback((params) => {
+  const scriptApi = useCallback(async (params) => {
     const url = getScriptUrl();
-    if (!url) return Promise.reject(new Error('No script URL configured'));
+    if (!url) throw new Error('No script URL configured');
     const qs = new URLSearchParams(params).toString();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25000);
-    return fetch(`${url}?${qs}`, { signal: controller.signal })
-      .then(async (r) => {
-        const text = await r.text();
-        if (!r.ok) {
-          throw new Error(`Server error (${r.status}). Check Apps Script Web App URL/deployment.`);
-        }
-        try {
-          return text ? JSON.parse(text) : null;
-        } catch {
-          throw new Error('Invalid server response. Check Apps Script Web App URL/deployment.');
-        }
-      })
-      .catch((err) => {
-        if (err?.name === 'AbortError') {
-          throw new Error('Request timed out. Please try again.');
-        }
-        // CORS, network, or blocked third-party cookies often surface as "Failed to fetch".
-        if (String(err?.message || '').includes('Failed to fetch')) {
-          throw new Error('Failed to reach Apps Script (network/CORS). Check SCRIPT_URL and Web App deployment access.');
-        }
-        throw err;
-      })
-      .finally(() => {
-        clearTimeout(timeout);
-      });
+    try {
+      const response = await fetch(`${url}?${qs}`, { signal: controller.signal });
+      const text = await response.text();
+      if (!response.ok) throw new Error(`Server error (${response.status})`);
+      return text ? JSON.parse(text) : null;
+    } catch (err) {
+      if (err?.name === 'AbortError') throw new Error('Request timed out. Please try again.');
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
   }, []);
 
+  // Load session from AsyncStorage
   useEffect(() => {
-    const stored = readSession();
-    if (!stored) {
-      setAuthReady(true);
+    async function loadSession() {
+      try {
+        const raw = await AsyncStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.sessionToken) {
+            // Check if token is expired
+            const isExpired = parsed.expires && new Date(parsed.expires).getTime() < Date.now();
+            if (!isExpired) {
+              setSession(parsed);
+              setSessionToken(parsed.sessionToken);
+            }
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setAuthReady(true);
+      }
+    }
+    loadSession();
+  }, []);
+
+  const canWrite = useMemo(() => {
+    return session.sessionToken && PERMISSIONS.canAddEntry(session.role);
+  }, [session]);
+
+  const handleLogin = useCallback(async () => {
+    if (!usernameInput.trim() || !passwordInput.trim()) {
+      setLoginError('Please enter both username and password.');
       return;
     }
-    if (!isTokenValid(stored)) {
-      setAuthReady(true);
-      return;
-    }
-
-    const token = stored.sessionToken || stored.idToken;
-    if (!token) {
-      setAuthReady(true);
-      return;
-    }
-
-    const action = stored.sessionToken ? 'sessionInfo' : 'googleLogin';
-    const payload = stored.sessionToken ? { action, sessionToken: token } : { action, idToken: token };
-
-    scriptApi(payload)
-      .then((res) => {
-        if (!res?.success) return;
-
+    setLoginLoading(true);
+    setLoginError('');
+    try {
+      const res = await scriptApi({
+        action: 'login',
+        username: usernameInput.trim(),
+        password: passwordInput.trim(),
+      });
+      if (res?.error) throw new Error(res.error);
+      if (res?.success) {
         const next = {
-          role: res.role || stored.role || ROLES.USER,
-          fullName: res.fullName || stored.fullName || res.email || 'User',
-          email: res.email || stored.email || '',
-          idToken: stored.idToken || token,
-          sessionToken: res.sessionToken || stored.sessionToken || '',
-          expires: res.expires || stored.expires || '',
+          role: res.role || ROLES.USER,
+          fullName: res.fullName || res.username || 'User',
+          email: res.email || '',
+          sessionToken: res.sessionToken || '',
+          expires: res.expires || '',
         };
         setSession(next);
-        writeSession(next);
-      })
-      .catch(() => {
-        // Keep the existing local session if the network check fails.
-      })
-      .finally(() => {
-        setAuthReady(true);
-      });
-  }, [scriptApi]);
+        setSessionToken(next.sessionToken);
+        await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(next));
 
-  const handleGoogleCredential = useCallback(async (idToken) => {
-    setGoogleModalError('');
-    try {
-      const res = await scriptApi({ action: 'googleLogin', idToken });
-      if (!res?.success) throw new Error(res?.error || 'Google auth failed');
-      const next = {
-        role: res.role || ROLES.USER,
-        fullName: res.fullName || res.email || 'User',
-        email: res.email || '',
-        idToken,
-        sessionToken: res.sessionToken || '',
-        expires: res.expires || '',
-      };
-      setSession(next);
-      writeSession(next);
-
-      const pending = pendingAuthRef.current;
-      pendingAuthRef.current = null;
-      setGoogleModalOpen(false);
-      if (pending?.resolve) pending.resolve(next);
+        const pending = pendingAuthRef.current;
+        pendingAuthRef.current = null;
+        setLoginModalOpen(false);
+        setUsernameInput('');
+        setPasswordInput('');
+        if (pending?.resolve) pending.resolve(next);
+      } else {
+        throw new Error('Authentication failed');
+      }
     } catch (err) {
-      setGoogleModalError(err.message || 'Google auth failed');
+      setLoginError(err.message || 'Login failed. Check your network or credentials.');
+    } finally {
+      setLoginLoading(false);
     }
-  }, [scriptApi]);
-
-  const initGoogleIdentity_ = useCallback(() => {
-    if (gisInitializedRef.current) return true;
-
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID_FALLBACK;
-    if (!clientId) return false;
-
-    const googleId = typeof window !== 'undefined' ? window.google?.accounts?.id : null;
-    if (!googleId) return false;
-
-    googleId.initialize({
-      client_id: clientId,
-      callback: (response) => {
-        if (response?.credential) handleGoogleCredential(response.credential);
-      },
-      // If the browser has an active Google session, this can often return an ID token without extra UI.
-      auto_select: true,
-      // Keep popup mode for explicit button sign-in fallback.
-      ux_mode: 'popup',
-    });
-
-    gisInitializedRef.current = true;
-    return true;
-  }, [handleGoogleCredential]);
+  }, [usernameInput, passwordInput, scriptApi]);
 
   const ensureWriteAccess = useCallback(() => {
     if (canWrite) {
       return Promise.resolve(session);
     }
-
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID_FALLBACK;
-    if (!clientId) return Promise.reject(new Error('Missing VITE_GOOGLE_CLIENT_ID'));
-
-    setGoogleModalError('');
-
+    setLoginError('');
     return new Promise((resolve, reject) => {
       pendingAuthRef.current = { resolve, reject };
-
-      const googleId = typeof window !== 'undefined' ? window.google?.accounts?.id : null;
-      const inited = initGoogleIdentity_();
-
-      // Try One Tap first. If it can't show or user dismisses, fall back to the modal button.
-      if (googleId && inited && typeof googleId.prompt === 'function') {
-        try {
-          googleId.prompt((notification) => {
-            if (
-              notification?.isNotDisplayed?.() ||
-              notification?.isSkippedMoment?.() ||
-              notification?.isDismissedMoment?.()
-            ) {
-              setGoogleModalOpen(true);
-            }
-          });
-
-          // If nothing happens quickly (covers browsers that neither display nor callback), show the modal.
-          setTimeout(() => {
-            if (pendingAuthRef.current) setGoogleModalOpen(true);
-          }, 900);
-        } catch {
-          setGoogleModalOpen(true);
-        }
-      } else {
-        setGoogleModalOpen(true);
-      }
+      setLoginModalOpen(true);
     });
-  }, [canWrite, initGoogleIdentity_, session]);
+  }, [canWrite, session]);
 
-  const cancelEnsureWriteAccess = useCallback(() => {
+  const cancelLogin = useCallback(() => {
     const pending = pendingAuthRef.current;
     pendingAuthRef.current = null;
-    setGoogleModalOpen(false);
+    setLoginModalOpen(false);
+    setUsernameInput('');
+    setPasswordInput('');
     if (pending?.reject) pending.reject(new Error('Cancelled'));
   }, []);
 
+  const logout = useCallback(async () => {
+    const guest = { role: ROLES.USER, fullName: 'Guest', email: '', sessionToken: '', expires: '' };
+    setSession(guest);
+    setSessionToken('');
+    await AsyncStorage.removeItem(SESSION_KEY);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ session, role: session.role, fullName: session.fullName, authReady, ensureWriteAccess }}>
+    <AuthContext.Provider value={{ session, role: session.role, fullName: session.fullName, authReady, ensureWriteAccess, logout }}>
       {children}
-      <GoogleWriteModal
-        open={googleModalOpen}
-        clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID_FALLBACK}
-        error={googleModalError}
-        onClose={cancelEnsureWriteAccess}
-        onInit={initGoogleIdentity_}
-      />
+      <Modal visible={loginModalOpen} transparent animationType="slide" onRequestClose={cancelLogin}>
+        <View style={tw`flex-1 justify-end bg-black/40`}>
+          <View style={tw`bg-[#FFFDF5] rounded-t-3xl px-5 pt-5 pb-8 space-y-4`}>
+            <View style={tw`flex-row justify-between items-start`}>
+              <View style={tw`flex-1`}>
+                <Text style={tw`font-black text-[#3D1F00] text-lg`}>Sign in to edit</Text>
+                <Text style={tw`text-xs text-[#8B6525] font-semibold mt-1`}>
+                  Adding/editing entries is restricted to authorized users.
+                </Text>
+              </View>
+              <TouchableOpacity onPress={cancelLogin} style={tw`p-2 bg-[#FFF3D6] rounded-full`}>
+                <Text style={tw`text-sm font-bold text-[#8B6525] px-1`}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={tw`space-y-3`}>
+              <View>
+                <Text style={tw`text-xs font-bold text-[#8B6525] mb-1`}>Username</Text>
+                <TextInput
+                  value={usernameInput}
+                  onChangeText={setUsernameInput}
+                  placeholder="Enter username"
+                  autoCapitalize="none"
+                  style={tw`border border-[#E8C97A] rounded-xl px-3 py-2.5 bg-white text-[#3D1F00] text-sm`}
+                />
+              </View>
+              <View>
+                <Text style={tw`text-xs font-bold text-[#8B6525] mb-1`}>Password</Text>
+                <TextInput
+                  value={passwordInput}
+                  onChangeText={setPasswordInput}
+                  placeholder="Enter password"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  style={tw`border border-[#E8C97A] rounded-xl px-3 py-2.5 bg-white text-[#3D1F00] text-sm`}
+                />
+              </View>
+            </View>
+
+            {loginError ? (
+              <View style={tw`bg-red-50 border border-red-200 rounded-xl px-3 py-2`}>
+                <Text style={tw`text-xs font-semibold text-red-700`}>{loginError}</Text>
+              </View>
+            ) : null}
+
+            <TouchableOpacity
+              onPress={handleLogin}
+              disabled={loginLoading}
+              style={tw`w-full bg-[#C96800] py-3.5 rounded-xl items-center justify-center`}
+            >
+              {loginLoading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={tw`text-white font-black text-base`}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </AuthContext.Provider>
   );
 }

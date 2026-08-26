@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Phone, RefreshCw, Search, X } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Linking, ActivityIndicator } from "react-native";
+import { ChevronDown, Phone, RefreshCw, Search, X } from "lucide-react-native";
 import { useSheets } from "../hooks/useSheets";
+import tw from "twrnc";
 
 const SECTION_ORDER = ["Captains", "Admins", "Doctors", "Others"];
 const SECTION_COLORS = {
@@ -47,170 +49,143 @@ export default function ImportantContacts() {
 
   useEffect(() => {
     if (forceOpenSections) return;
-    // Only auto-open the first section once after we have data.
     if (!didInitOpenSection.current && sections.length > 0) {
       didInitOpenSection.current = true;
       setOpenSection(sections[0]);
       return;
     }
-
-    // If the currently-open section disappears (data changed), fall back to the first section.
     if (openSection !== null && sections.length > 0 && !grouped[openSection]) {
       setOpenSection(sections[0]);
     }
   }, [sections, grouped, openSection, forceOpenSections]);
 
+  const handleCall = (phone) => {
+    if (phone) {
+      Linking.openURL(`tel:${phone}`).catch(() => {});
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">
-      <header className="px-4 pt-4 pb-3 bg-[#C96800] flex items-center gap-3">
+    <View style={tw`flex-1 bg-[#FFFDF5]`}>
+      {/* Header */}
+      <View style={tw`flex-row items-center gap-3 px-4 pt-12 pb-3 bg-[#C96800]`}>
         {isSearchOpen ? (
-          <div className="flex-1 min-w-0 flex items-center gap-2 bg-white/15 rounded-xl px-3 py-2">
-            <Search size={18} className="text-white flex-shrink-0" />
-            <input
+          <View style={tw`flex-1 flex-row items-center gap-2 bg-white/15 rounded-xl px-3 py-1.5`}>
+            <Search size={18} color="white" />
+            <TextInput
               autoFocus
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChangeText={setSearchQuery}
               placeholder="Search by name"
-              className="w-full bg-transparent text-white placeholder:text-white/70 outline-none text-sm font-semibold"
+              placeholderTextColor="rgba(255,255,255,0.7)"
+              style={tw`flex-1 text-white text-sm font-semibold`}
             />
             {searchQuery ? (
-              // ✅ has text → show clear button only
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="text-white p-1 rounded-lg hover:bg-white/10 flex-shrink-0"
-                aria-label="Clear search"
-                title="Clear"
-              >
-                <X size={16} />
-              </button>
+              <TouchableOpacity onPress={() => setSearchQuery("")} style={tw`p-1`}>
+                <X size={16} color="white" />
+              </TouchableOpacity>
             ) : (
-              // ✅ no text → show close button only
-              <button
-                type="button"
-                onClick={() => {
+              <TouchableOpacity
+                onPress={() => {
                   setIsSearchOpen(false);
                   setSearchQuery("");
                 }}
-                className="text-white p-1 rounded-lg hover:bg-white/10 flex-shrink-0"
-                aria-label="Close search"
-                title="Close"
+                style={tw`p-1`}
               >
-                <X size={16} />
-              </button>
+                <X size={16} color="white" />
+              </TouchableOpacity>
             )}
-          </div>
+          </View>
         ) : (
-          <h1 className="text-white font-black text-base flex-1">
-            Important Contacts
-          </h1>
+          <Text style={tw`text-white font-black text-base flex-1`}>Important Contacts</Text>
         )}
 
         {!isSearchOpen && (
-          <button
-            type="button"
-            onClick={() => setIsSearchOpen(true)}
-            className="text-white p-2 rounded-xl hover:bg-orange-700"
-            aria-label="Search"
-            title="Search"
-          >
-            <Search size={18} />
-          </button>
+          <TouchableOpacity onPress={() => setIsSearchOpen(true)} style={tw`p-2`}>
+            <Search size={18} color="white" />
+          </TouchableOpacity>
         )}
-        <button
-          onClick={syncConfig}
-          className="text-white p-2 rounded-xl hover:bg-orange-700"
-        >
-          <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-        </button>
-      </header>
+        <TouchableOpacity onPress={syncConfig} style={tw`p-2`}>
+          {loading ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <RefreshCw size={18} color="white" />
+          )}
+        </TouchableOpacity>
+      </View>
 
-      <div className="scroll-area px-4 pt-5 space-y-4">
+      {/* Content */}
+      <ScrollView style={tw`flex-1 px-4 pt-5`} contentContainerStyle={tw`pb-24`}>
         {Object.keys(grouped).length === 0 && (
-          <div className="text-center py-12">
-            <Phone size={20} className="text-[#E8C97A] mx-auto mb-3" />
-            <p className="text-[#8B6525] font-semibold text-sm">
-              {searchQuery.trim()
-                ? "No matching contacts found."
-                : "No contacts found."}
-            </p>
-            <p className="text-xs text-[#8B6525] mt-1">
+          <View style={tw`items-center py-12`}>
+            <Phone size={24} color="#E8C97A" style={tw`mb-3`} />
+            <Text style={tw`text-[#8B6525] font-semibold text-sm`}>
+              {searchQuery.trim() ? "No matching contacts found." : "No contacts found."}
+            </Text>
+            <Text style={tw`text-xs text-[#8B6525] mt-1 text-center`}>
               {searchQuery.trim()
                 ? "Try a different name or clear the search."
-                : 'Add contacts to the "Important Contacts" tab in your Google Sheet.'}
-            </p>
-          </div>
+                : "Add contacts to the \"Important Contacts\" tab in your Google Sheet."}
+            </Text>
+          </View>
         )}
 
-        {Object.entries(grouped).map(([section, list]) => (
-          <div key={section} className="pb-1">
-            {/* <button
-              type="button"
-              onClick={() => setOpenSection(prev => (prev === section ? null : section))}
-              aria-expanded={openSection === section}
-              className="w-full font-black text-sm mb-2 px-1 flex items-center justify-between gap-3 text-left"
-              style={{ color: SECTION_COLORS[section] || '#C96800' }}
-            >
-              <span>{section}</span>
-              <ChevronDown
-                size={18}
-                className={`text-[#8B6525] transition-transform ${openSection === section ? 'rotate-180' : ''}`}
-              />
-            </button> */}
-            <button
-              type="button"
-              onClick={() => {
-                if (forceOpenSections) return;
-                setOpenSection((prev) => (prev === section ? null : section));
-              }}
-              aria-expanded={forceOpenSections || openSection === section}
-              className="w-full font-black text-sm mb-2 flex items-center justify-between gap-3 text-left px-3 py-2 rounded-xl"
-              style={{
-                backgroundColor: (SECTION_COLORS[section] || "#C96800") + "18",
-                borderLeft: `4px solid ${SECTION_COLORS[section] || "#C96800"}`,
-                color: SECTION_COLORS[section] || "#C96800",
-              }}
-            >
-              <span>{section}</span>
-              <ChevronDown
-                size={18}
-                className={`transition-transform ${forceOpenSections || openSection === section ? "rotate-180" : ""}`}
-                style={{ color: SECTION_COLORS[section] || "#C96800" }}
-              />
-            </button>
+        {Object.entries(grouped).map(([section, list]) => {
+          const sectionColor = SECTION_COLORS[section] || "#C96800";
+          const isOpen = forceOpenSections || openSection === section;
+          return (
+            <View key={section} style={tw`mb-4`}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (forceOpenSections) return;
+                  setOpenSection((prev) => (prev === section ? null : section));
+                }}
+                style={[
+                  tw`flex-row items-center justify-between px-3 py-2 rounded-xl mb-2`,
+                  {
+                    backgroundColor: sectionColor + "18",
+                    borderLeftWidth: 4,
+                    borderLeftColor: sectionColor,
+                  },
+                ]}
+              >
+                <Text style={[tw`font-black text-sm`, { color: sectionColor }]}>{section}</Text>
+                <ChevronDown
+                  size={18}
+                  color={sectionColor}
+                  style={{ transform: [{ rotate: isOpen ? "180deg" : "0deg" }] }}
+                />
+              </TouchableOpacity>
 
-            {(forceOpenSections || openSection === section) && (
-              <div className="space-y-1">
-                {list.map((c, i) => (
-                  <div
-                    key={i}
-                    className="bg-white border border-[#F5E5B0] rounded-xl px-2 py-1 flex items-center gap-3"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[#3D1F00] text-sm">
-                        {c.name}
-                      </p>
-                      {c.note && (
-                        <p className="text-xs text-[#8B6525] mt-0.5">
-                          {c.note}
-                        </p>
-                      )}
-                    </div>
-                    {c.phone && (
-                      <a
-                        href={`tel:${c.phone}`}
-                        className="flex items-center justify-center w-10 h-10 bg-[#1B7A3A] text-white rounded-xl flex-shrink-0"
-                      >
-                        <Phone size={16} />
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
+              {isOpen && (
+                <View style={tw`gap-1.5`}>
+                  {list.map((c, i) => (
+                    <View
+                      key={i}
+                      style={tw`bg-white border border-[#F5E5B0] rounded-xl px-3 py-2 flex-row items-center gap-3`}
+                    >
+                      <View style={tw`flex-1`}>
+                        <Text style={tw`font-bold text-[#3D1F00] text-sm`}>{c.name}</Text>
+                        {c.note ? (
+                          <Text style={tw`text-xs text-[#8B6525] mt-0.5`}>{c.note}</Text>
+                        ) : null}
+                      </View>
+                      {c.phone ? (
+                        <TouchableOpacity
+                          onPress={() => handleCall(c.phone)}
+                          style={tw`w-10 h-10 bg-[#1B7A3A] items-center justify-center rounded-xl`}
+                        >
+                          <Phone size={16} color="white" />
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
