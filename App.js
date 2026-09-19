@@ -59,8 +59,9 @@ function TabNavigator() {
     >
       <Tab.Screen name="DashboardTab" component={Dashboard} options={{ title: 'Home' }} />
       <Tab.Screen name="EntriesTab" component={Entries} options={{ title: 'Vihar Entries' }} />
-      <Tab.Screen name="DirectoryTab" component={ViharDirectory} options={{ title: 'Directory' }} />
-      <Tab.Screen name="ContactsTab" component={ImportantContacts} options={{ title: 'Imp. Contacts' }} />
+      {/* Temporarily hidden for security */}
+      {/* <Tab.Screen name="DirectoryTab" component={ViharDirectory} options={{ title: 'Directory' }} /> */}
+      {/* <Tab.Screen name="ContactsTab" component={ImportantContacts} options={{ title: 'Imp. Contacts' }} /> */}
     </Tab.Navigator>
   );
 }

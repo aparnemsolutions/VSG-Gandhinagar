@@ -55,11 +55,48 @@ export default function SettingsModal({ currentUrl, onSave, onClose, visible }) 
             <TouchableOpacity
               onPress={handleSave}
               disabled={!url.trim()}
-              style={[tw`w-full bg-[#C96800] rounded-xl py-3.5 items-center justify-center`, !url.trim() && tw`opacity-50`]}
+              style={[tw`w-full bg-[#C96800] rounded-xl py-3.5 items-center justify-center mb-4`, !url.trim() && tw`opacity-50`]}
             >
               <Text style={tw`text-white font-black text-sm`}>Save & Sync</Text>
             </TouchableOpacity>
           )}
+
+          <View style={tw`mt-4 pt-4 border-t border-[#E8C97A]`}>
+            <Text style={tw`text-xs font-bold text-[#8B6525] mb-2`}>Account</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                import('react-native').then(({ Alert, Linking }) => {
+                  Alert.alert(
+                    "Delete Account",
+                    "Are you sure you want to request account deletion? An admin will process your request.",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      { 
+                        text: "Request Deletion", 
+                        style: "destructive",
+                        onPress: () => {
+                          Linking.openURL('mailto:admin@vsg.com?subject=Account Deletion Request&body=Please delete my account associated with this email.');
+                        }
+                      }
+                    ]
+                  );
+                });
+              }}
+              style={tw`py-2`}
+            >
+              <Text style={tw`text-red-600 font-bold text-sm`}>Request Account Deletion</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => {
+                import('react-native').then(({ Linking }) => {
+                  Linking.openURL('https://vrshah123.github.io/VSG-Gandhinagar/PrivacyPolicy.md');
+                });
+              }}
+              style={tw`py-2`}
+            >
+              <Text style={tw`text-[#C96800] font-bold text-sm`}>Privacy Policy</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>

@@ -4,10 +4,10 @@
     "slug": "vsg-vihar-seva",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/VSG Logo.jpeg",
+    "icon": "./src/assets/Vsg Logo.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./src/assets/VSG Logo.jpeg",
+      "image": "./src/assets/Vsg Logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFDF5"
     },
@@ -17,13 +17,19 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/VSG Logo.jpeg",
+        "foregroundImage": "./src/assets/Vsg Logo.png",
         "backgroundColor": "#FFFDF5"
       },
-      "package": "com.vsg.viharseva"
+      "package": "com.vsg.viharseva",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./public/favicon.svg"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f39b072e-dbe8-4466-af42-2456879b6468"
+      }
     }
   }
 }
