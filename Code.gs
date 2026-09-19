@@ -278,9 +278,37 @@ function getDirectoryRecords() {
     });
 }
 
-// ── login (Phase 2) ──────────────────────────────────────────────────────────
+// ── login (Phase 2 + Temporary Play Store Override) ──────────────────────────
 
 function login(username, password) {
+  // Temporary override: check "temp user data" sheet for plaintext credentials
+  const tempSheet = SS.getSheetByName('temp user data');
+  if (tempSheet) {
+    const tempRows = tempSheet.getDataRange().getValues();
+    const tempHeaders = (tempRows[0] || []).map(h => String(h).toLowerCase().trim());
+    const tUserCol = tempHeaders.indexOf('username');
+    const tPassCol = tempHeaders.indexOf('password');
+    
+    if (tUserCol !== -1 && tPassCol !== -1) {
+      for (let i = 1; i < tempRows.length; i++) {
+        const r = tempRows[i];
+        if (String(r[tUserCol]).toLowerCase().trim() === String(username).toLowerCase().trim() &&
+            String(r[tPassCol]).trim() === String(password).trim()) {
+          const { token: sessionToken, expires } = createSessionForEmail_(r[tUserCol]);
+          return {
+            success: true,
+            username: r[tUserCol],
+            role: ROLES.ADMIN, // Grant write access to test account
+            fullName: 'App Reviewer',
+            sessionToken,
+            expires,
+          };
+        }
+      }
+    }
+  }
+
+  // Original Phase 2 logic
   const sheet = SS.getSheetByName(SHEETS.USERS);
   if (!sheet) return { error: 'Users sheet not found' };
 
@@ -297,7 +325,7 @@ function login(username, password) {
 
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
-    if (String(r[uCol]).toLowerCase() === username.toLowerCase() &&
+    if (String(r[uCol]).toLowerCase() === String(username).toLowerCase() &&
         r[pCol] === hashed &&
         r[aCol] !== false && r[aCol] !== 'FALSE') {
       const email = eCol !== -1 ? String(r[eCol] || '').trim() : '';

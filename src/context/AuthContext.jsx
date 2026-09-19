@@ -9,10 +9,10 @@ const SESSION_KEY = 'vsg-google-session-v1';
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState({
-    role: ROLES.ADMIN,
-    fullName: 'Admin',
-    email: 'admin@vsg.com',
-    sessionToken: 'hardcoded',
+    role: ROLES.USER,
+    fullName: 'Guest',
+    email: '',
+    sessionToken: '',
     expires: '',
   });
   const [authReady, setAuthReady] = useState(false);
