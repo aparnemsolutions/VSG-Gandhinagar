@@ -84,15 +84,13 @@ export default function Dashboard() {
               <RefreshCw size={18} color="white" />
             )}
           </TouchableOpacity>
-          {PERMISSIONS.canAddEntry(role) && (
-            <TouchableOpacity
-              onPress={() => navigation.navigate("AddEntry")}
-              style={tw`flex-row items-center gap-1 bg-white px-2.5 py-2 rounded-xl`}
-            >
-              <Plus size={12} color="#C96800" />
-              <Text style={tw`text-[#C96800] font-bold text-xs`}>Add Report</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={() => navigation.navigate("AddEntry")}
+            style={tw`flex-row items-center gap-1 bg-white px-2.5 py-2 rounded-xl`}
+          >
+            <Plus size={12} color="#C96800" />
+            <Text style={tw`text-[#C96800] font-bold text-xs`}>Add Report</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
