@@ -9,7 +9,23 @@
 //    - Who has access: Anyone
 // 4. Click Deploy → Copy the Web App URL
 
-const SS = SpreadsheetApp.openById('1tvZ2SVEUYX8dzGg1wZXeTvMZURjxwntOKrECiWqLcEA');
+const SPREADSHEET_ID = '1tvZ2SVEUYX8dzGg1wZXeTvMZURjxwntOKrECiWqLcEA';
+
+function getSS_() {
+  try {
+    const active = SpreadsheetApp.getActiveSpreadsheet();
+    if (active) return active;
+  } catch (e) {}
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
+
+const SS = new Proxy({}, {
+  get(target, prop) {
+    const inst = getSS_();
+    const val = inst[prop];
+    return typeof val === 'function' ? val.bind(inst) : val;
+  }
+});
 
 // OAuth Client ID (same as VITE_GOOGLE_CLIENT_ID in the frontend).
 // Recommended: set this as Script Property `GOOGLE_CLIENT_ID` instead of hardcoding.
@@ -222,9 +238,30 @@ function getConfig() {
   const appCfg = SS.getSheetByName(SHEETS.CONFIG);
   if (appCfg) {
     const data = appCfg.getDataRange().getValues();
-    data.slice(1).forEach(r => {
-      if (r[0]) config.appConfig[r[0]] = r[1];
-    });
+    if (data.length > 0) {
+      const headers = data[0].map(h => String(h || '').trim());
+      config.yearSummaries = [];
+      data.slice(1).forEach(r => {
+        const key = String(r[0] || '').trim();
+        if (!key) return;
+        config.appConfig[key] = r[1];
+
+        // If this row has summary metrics, attach as structured record
+        const viharIdx = headers.findIndex(h => /total\s*vihar/i.test(h));
+        if (viharIdx !== -1 && r[viharIdx] !== '' && r[viharIdx] != null && key !== 'current_year_label') {
+          const kmIdx = headers.findIndex(h => /total\s*km/i.test(h));
+          const sadhuIdx = headers.findIndex(h => /sadhu/i.test(h));
+          const sadhvijiIdx = headers.findIndex(h => /sadhviji/i.test(h));
+          config.yearSummaries.push({
+            year: key,
+            totalVihars: r[viharIdx],
+            totalKm: kmIdx !== -1 ? r[kmIdx] : 0,
+            totalSadhu: sadhuIdx !== -1 ? r[sadhuIdx] : 0,
+            totalSadhviji: sadhvijiIdx !== -1 ? r[sadhvijiIdx] : 0,
+          });
+        }
+      });
+    }
   }
 
   return config;
@@ -305,23 +342,407 @@ function login(username, password) {
   return { error: 'Invalid username or password' };
 }
 
-// ── newYear ──────────────────────────────────────────────────────────────────
+// ── Reset Year & Automation (Google Sheets & API) ─────────────────────────
 
-function newYear(year, idToken) {
-  requireNewYearAccess_(idToken);
+/**
+ * GENERIC ONE-CLICK YEAR RESET (Works for ANY year forever)
+ * -------------------------------------------------------------
+ * Automatically reads the current year from "App Config" (e.g. 2025-26)
+ * and calculates the next year (e.g. 2026-27).
+ * Next year (2026-27 -> 2027-28), it automatically rolls over with ZERO code changes!
+ * 
+ * Can be triggered from:
+ * 1. Top menu on the sheet: VSG Admin ➔ Reset Year...
+ * 2. A clickable button inserted on the sheet (assigned to `resetYear`)
+ * 3. Apps Script Editor toolbar: select `resetYear` and click 'Run'
+ * -------------------------------------------------------------
+ */
+function resetYear() {
+  const currentYear = getAppConfigValue_('current_year_label', '2025-26');
+  const nextYear = getNextYearLabel_(currentYear);
+  const summary = calculateCurrentYearSummary_();
+
+  let targetNewYear = nextYear;
+
+  // If running with active Google Sheets UI, show confirmation
+  try {
+    const ui = SpreadsheetApp.getUi();
+    const confirmMsg =
+      'CURRENT YEAR: ' + currentYear + '\n\n' +
+      'OUTGOING YEAR SUMMARY:\n' +
+      '  • Total Vihars: ' + summary.totalVihars + '\n' +
+      '  • Total KM: ' + summary.totalKm + ' km\n' +
+      '  • Sadhu Bhagvant: ' + summary.totalSadhu + '\n' +
+      '  • Sadhviji Bhagvant: ' + summary.totalSadhviji + '\n\n' +
+      'WHAT THIS WILL DO:\n' +
+      '  1. In "App Config":\n' +
+      '     - Update "current_year_label" to: ' + nextYear + '\n' +
+      '     - Add row for ' + currentYear + ' with values in columns:\n' +
+      '       [Total Vihar | Total KM | Total Sadhu Bhagwant | Total Sadhviji Bhagwant]\n' +
+      '  2. Archive "' + SHEETS.VIHAR + '" to "' + SHEETS.VIHAR + ' ' + currentYear + '"\n' +
+      '  3. Clear active Vihar rows (starts fresh at Vihar No. 1)\n' +
+      '  4. Master Data stays untouched\n\n' +
+      'Do you want to proceed?';
+
+    const res = ui.alert('VSG Year Reset Confirmation', confirmMsg, ui.ButtonSet.YES_NO);
+    if (res !== ui.Button.YES) {
+      ui.alert('Reset cancelled. No changes were made.');
+      return;
+    }
+
+    const promptRes = ui.prompt(
+      'New Year Label',
+      'Enter new year label (default: ' + nextYear + '):',
+      ui.ButtonSet.OK_CANCEL
+    );
+    if (promptRes.getSelectedButton() !== ui.Button.OK) {
+      ui.alert('Reset cancelled. No changes were made.');
+      return;
+    }
+
+    const entered = promptRes.getResponseText().trim();
+    if (entered) targetNewYear = entered;
+  } catch (e) {
+    Logger.log('Running resetYear in background/editor mode...');
+  }
+
+  Logger.log('>>> Resetting from ' + currentYear + ' to ' + targetNewYear);
+  const result = executeYearReset_(currentYear, targetNewYear, summary);
+
+  try {
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      'Year Reset Completed Successfully! 🎉',
+      '• Archived Sheet: "' + result.archived + '"\n' +
+      '• Updated App Config:\n' +
+      '    - "current_year_label" set to: ' + targetNewYear + '\n' +
+      '    - Added row for ' + currentYear + ':\n' +
+      '        Total Vihar: ' + summary.totalVihars + '\n' +
+      '        Total KM: ' + summary.totalKm + ' km\n' +
+      '        Total Sadhu Bhagwant: ' + summary.totalSadhu + '\n' +
+      '        Total Sadhviji Bhagwant: ' + summary.totalSadhviji + '\n' +
+      '• Active "' + SHEETS.VIHAR + '" is now clean (starts at Vihar No. 1)\n' +
+      '• Master Data was preserved.',
+      ui.ButtonSet.OK
+    );
+  } catch (e) {
+    Logger.log('>>> Completed: ' + JSON.stringify(result));
+  }
+
+  return result;
+}
+
+// Backward-compatible alias
+function RESET_YEAR_2025_TO_2026() {
+  return resetYear();
+}
+
+function runYearReset() {
+  return resetYear();
+}
+
+function resetYearInteractive() {
+  return resetYear();
+}
+
+/**
+ * Automatically computes the next year label:
+ * "2025-26" -> "2026-27"
+ * "2026-27" -> "2027-28"
+ * "2025"    -> "2026"
+ */
+function getNextYearLabel_(currentYear) {
+  const str = String(currentYear || '').trim();
+  const parts = str.split('-');
+  if (parts.length === 2) {
+    const start = parseInt(parts[0], 10);
+    const end = parseInt(parts[1], 10);
+    if (!isNaN(start) && !isNaN(end)) {
+      const nextStart = start + 1;
+      const nextEnd = end + 1;
+      const endStr = parts[1].length === 2 ? String(nextEnd).slice(-2) : String(nextEnd);
+      return nextStart + '-' + endStr;
+    }
+  }
+  const single = parseInt(str, 10);
+  if (!isNaN(single)) return String(single + 1);
+  return String(new Date().getFullYear() + 1);
+}
+
+function onOpen(e) {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    ui.createMenu('VSG Admin')
+      .addItem('🔄 Reset Year (Archive & Start New)...', 'resetYear')
+      .addToUi();
+  } catch (err) {
+    Logger.log('onOpen notice: ' + err.message);
+  }
+}
+
+/**
+ * Interactive Reset function callable from:
+ * 1. Google Sheets menu: ⚙️ VSG Admin ➔ 🔄 Reset Year (Archive & Start New)...
+ * 2. Any drawing / button inserted in the Google Sheet (assigned to `resetYearInteractive`)
+ */
+function resetYearInteractive() {
+  const ui = SpreadsheetApp.getUi();
+  const currentYear = getAppConfigValue_('current_year_label', '2025-26');
+  const summary = calculateCurrentYearSummary_();
+
+  const confirmMsg =
+    'CURRENT YEAR: ' + currentYear + '\n\n' +
+    'OUTGOING YEAR SUMMARY:\n' +
+    '  • Total Vihars: ' + summary.totalVihars + '\n' +
+    '  • Total KM: ' + summary.totalKm + ' km\n' +
+    '  • Sadhu Bhagvant: ' + summary.totalSadhu + '\n' +
+    '  • Sadhviji Bhagvant: ' + summary.totalSadhviji + '\n\n' +
+    'WHAT THIS WILL DO:\n' +
+    '  1. In "App Config":\n' +
+    '     - Update "current_year_label" to the new year\n' +
+    '     - Add new row for ' + currentYear + ' with values in columns:\n' +
+    '       [Total Vihar | Total KM | Total Sadhu Bhagwant | Total Sadhviji Bhagwant]\n' +
+    '  2. Archive "' + SHEETS.VIHAR + '" to "' + SHEETS.VIHAR + ' ' + currentYear + '"\n' +
+    '  3. Clear active Vihar rows (starts fresh at Vihar No. 1)\n' +
+    '  4. Master Data stays untouched\n\n' +
+    'Do you want to proceed?';
+
+  const res = ui.alert('VSG Year Reset Confirmation', confirmMsg, ui.ButtonSet.YES_NO);
+  if (res !== ui.Button.YES) {
+    ui.alert('Reset cancelled. No changes were made.');
+    return;
+  }
+
+  const promptRes = ui.prompt(
+    'New Year Label',
+    'Enter the new year label (default: 2026-27):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (promptRes.getSelectedButton() !== ui.Button.OK) {
+    ui.alert('Reset cancelled. No changes were made.');
+    return;
+  }
+
+  const enteredYear = promptRes.getResponseText().trim();
+  const newYear = enteredYear || '2026-27';
+
+  try {
+    const result = executeYearReset_(currentYear, newYear, summary);
+    ui.alert(
+      'Year Reset Completed Successfully! 🎉',
+      '• Archived Sheet: "' + result.archived + '"\n' +
+      '• Updated App Config:\n' +
+      '    - "current_year_label" set to: ' + newYear + '\n' +
+      '    - Added row for ' + currentYear + ':\n' +
+      '        Total Vihar: ' + summary.totalVihars + '\n' +
+      '        Total KM: ' + summary.totalKm + ' km\n' +
+      '        Total Sadhu Bhagwant: ' + summary.totalSadhu + '\n' +
+      '        Total Sadhviji Bhagwant: ' + summary.totalSadhviji + '\n' +
+      '• Active "' + SHEETS.VIHAR + '" is now clean (starts at Vihar No. 1)\n' +
+      '• Master Data was preserved.',
+      ui.ButtonSet.OK
+    );
+  } catch (err) {
+    ui.alert('Error during reset: ' + err.message);
+  }
+}
+
+function calculateCurrentYearSummary_() {
   const sheet = getOrCreateViharSheet();
-  const archiveName = SHEETS.VIHAR + ' ' + year;
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) {
+    return { totalVihars: 0, totalKm: 0, totalSadhu: 0, totalSadhviji: 0 };
+  }
 
-  // Duplicate current sheet as archive
-  sheet.copyTo(SS).setName(archiveName);
+  const headers = rows[0];
+  const delCol = headers.indexOf('Deleted');
+  const kmCol = headers.indexOf('KM');
+  const sadhuCol = headers.indexOf('Sadhu Bhagvant');
+  const sadhvijiCol = headers.indexOf('Sadhviji Bhagvant');
 
-  // Clear existing data (keep headers)
+  let totalVihars = 0;
+  let totalKm = 0;
+  let totalSadhu = 0;
+  let totalSadhviji = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (delCol !== -1 && (r[delCol] === true || String(r[delCol]).toUpperCase() === 'TRUE')) {
+      continue;
+    }
+    totalVihars++;
+    if (kmCol !== -1) {
+      const k = Number(r[kmCol]);
+      if (Number.isFinite(k)) totalKm += k;
+    }
+    if (sadhuCol !== -1) {
+      const s = Number(r[sadhuCol]);
+      if (Number.isFinite(s)) totalSadhu += s;
+    }
+    if (sadhvijiCol !== -1) {
+      const sv = Number(r[sadhvijiCol]);
+      if (Number.isFinite(sv)) totalSadhviji += sv;
+    }
+  }
+
+  return {
+    totalVihars: totalVihars,
+    totalKm: Math.round(totalKm * 10) / 10,
+    totalSadhu: totalSadhu,
+    totalSadhviji: totalSadhviji,
+  };
+}
+
+function executeYearReset_(oldYear, newYear, summary) {
+  if (!summary) {
+    summary = calculateCurrentYearSummary_();
+  }
+
+  // 1. Update App Config: updates current_year_label and adds row for oldYear with column metrics
+  updateAppConfigWithYearSummary_(oldYear, newYear, summary);
+
+  // 2. Duplicate active Vihar Seva sheet to archive
+  const sheet = getOrCreateViharSheet();
+  let archiveName = SHEETS.VIHAR + ' ' + oldYear;
+  if (SS.getSheetByName(archiveName)) {
+    archiveName = archiveName + ' (' + Utilities.formatDate(new Date(), 'Asia/Kolkata', 'yyyyMMdd_HHmmss') + ')';
+  }
+  sheet.copyTo(getSS_()).setName(archiveName);
+
+  // 3. Clear active sheet rows (keep row 1 headers)
   const lastRow = sheet.getLastRow();
   if (lastRow > 1) {
     sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
   }
 
-  return { success: true, archived: archiveName };
+  return {
+    success: true,
+    archived: archiveName,
+    oldYear: oldYear,
+    newYear: newYear,
+    summary: summary,
+  };
+}
+
+function updateAppConfigWithYearSummary_(oldYear, newYear, summary) {
+  let sheet = SS.getSheetByName(SHEETS.CONFIG);
+  if (!sheet) {
+    sheet = SS.insertSheet(SHEETS.CONFIG);
+    sheet.appendRow([
+      'Key',
+      'Value',
+      'Total Vihar',
+      'Total KM',
+      'Total Sadhu Bhagwant',
+      'Total Sadhviji Bhagwant',
+    ]);
+  }
+
+  const rows = sheet.getDataRange().getValues();
+  let headers = rows[0] ? rows[0].map(h => String(h || '').trim()) : [];
+
+  // Match columns case-insensitively
+  let keyCol = headers.findIndex(h => /^key$/i.test(h));
+  if (keyCol === -1) keyCol = 0;
+
+  let valCol = headers.findIndex(h => /^value$/i.test(h));
+  if (valCol === -1) valCol = 1;
+
+  let viharCol = headers.findIndex(h => /total\s*vihar/i.test(h));
+  let kmCol = headers.findIndex(h => /total\s*km/i.test(h));
+  let sadhuCol = headers.findIndex(h => /sadhu/i.test(h));
+  let sadhvijiCol = headers.findIndex(h => /sadhviji/i.test(h));
+
+  // If any header column doesn't exist, create it in row 1
+  let nextCol = headers.length;
+  if (viharCol === -1) { viharCol = nextCol++; sheet.getRange(1, viharCol + 1).setValue('Total Vihar'); }
+  if (kmCol === -1) { kmCol = nextCol++; sheet.getRange(1, kmCol + 1).setValue('Total KM'); }
+  if (sadhuCol === -1) { sadhuCol = nextCol++; sheet.getRange(1, sadhuCol + 1).setValue('Total Sadhu Bhagwant'); }
+  if (sadhvijiCol === -1) { sadhvijiCol = nextCol++; sheet.getRange(1, sadhvijiCol + 1).setValue('Total Sadhviji Bhagwant'); }
+
+  // 1. Update current_year_label row
+  let currentYearRowIdx = -1;
+  let oldYearRowIdx = -1;
+
+  for (let i = 1; i < rows.length; i++) {
+    const k = String(rows[i][keyCol] || '').trim();
+    if (k === 'current_year_label') {
+      currentYearRowIdx = i + 1;
+    } else if (k === String(oldYear).trim()) {
+      oldYearRowIdx = i + 1;
+    }
+  }
+
+  if (currentYearRowIdx !== -1) {
+    sheet.getRange(currentYearRowIdx, valCol + 1).setValue(newYear);
+  } else {
+    const newRow = [];
+    newRow[keyCol] = 'current_year_label';
+    newRow[valCol] = newYear;
+    sheet.appendRow(newRow);
+  }
+
+  // 2. Build row data for the outgoing year
+  const totalCols = Math.max(sheet.getLastColumn(), viharCol + 1, kmCol + 1, sadhuCol + 1, sadhvijiCol + 1);
+  const rowData = [];
+  for (let c = 0; c < totalCols; c++) rowData.push('');
+
+  rowData[keyCol] = oldYear;
+  rowData[valCol] = oldYear;
+  rowData[viharCol] = summary.totalVihars;
+  rowData[kmCol] = summary.totalKm;
+  rowData[sadhuCol] = summary.totalSadhu;
+  rowData[sadhvijiCol] = summary.totalSadhviji;
+
+  if (oldYearRowIdx !== -1) {
+    sheet.getRange(oldYearRowIdx, 1, 1, rowData.length).setValues([rowData]);
+  } else {
+    sheet.appendRow(rowData);
+  }
+}
+
+function getAppConfigValue_(key, defaultValue) {
+  const sheet = SS.getSheetByName(SHEETS.CONFIG);
+  if (!sheet) return defaultValue;
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return defaultValue;
+
+  const headers = rows[0] ? rows[0].map(h => String(h || '').trim()) : [];
+  let keyCol = headers.findIndex(h => /^key$/i.test(h));
+  if (keyCol === -1) keyCol = 0;
+  let valCol = headers.findIndex(h => /^value$/i.test(h));
+  if (valCol === -1) valCol = 1;
+
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][keyCol]).trim() === String(key).trim()) {
+      const val = rows[i][valCol];
+      return val !== '' && val != null ? String(val).trim() : defaultValue;
+    }
+  }
+  return defaultValue;
+}
+
+function setAppConfigValue_(key, value) {
+  let sheet = SS.getSheetByName(SHEETS.CONFIG);
+  if (!sheet) {
+    sheet = SS.insertSheet(SHEETS.CONFIG);
+    sheet.appendRow(['Key', 'Value']);
+  }
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).trim() === String(key).trim()) {
+      sheet.getRange(i + 1, 2).setValue(value);
+      return;
+    }
+  }
+  sheet.appendRow([key, value]);
+}
+
+function newYear(newYearLabel, idToken) {
+  requireNewYearAccess_(idToken);
+  const oldYear = getAppConfigValue_('current_year_label', '2025-26');
+  const targetNewYear = newYearLabel || '2026-27';
+  return executeYearReset_(oldYear, targetNewYear);
 }
 
 // ── Google Auth (write gate) ──────────────────────────────────────────────────

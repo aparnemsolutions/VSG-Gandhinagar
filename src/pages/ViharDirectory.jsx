@@ -229,7 +229,7 @@ export default function ViharDirectory() {
     if (!personName) return [];
 
     return entries
-      .filter((entry) => String(entry.date).slice(0, 4) === yearKey)
+      .filter((entry) => yearKey.includes(String(entry.date).slice(0, 4)))
       .filter((entry) => {
         const sevaks = Array.isArray(entry.sevak) ? entry.sevak : [entry.sevak];
         const sevikas = Array.isArray(entry.sevika)
