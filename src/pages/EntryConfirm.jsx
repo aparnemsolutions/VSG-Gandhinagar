@@ -25,7 +25,10 @@ export default function EntryConfirm() {
 
   return (
     <div className="flex flex-col h-full w-full max-w-[480px] mx-auto bg-[#FFFDF5]">
-      <div className="scroll-area px-4 pt-8 space-y-5 flex flex-col items-center">
+      <div
+        className="scroll-area px-4 space-y-5 flex flex-col items-center"
+        style={{ paddingTop: 'calc(32px + env(safe-area-inset-top, 0px))' }}
+      >
         <CheckCircle size={64} className="text-green-600" />
         <h1 className="font-black text-2xl text-[#3D1F00]">Vihar Saved!</h1>
         <p className="text-[#8B6525] text-sm font-semibold">Vihar No. {entry.viharNo} has been saved.</p>

@@ -41,6 +41,14 @@ button {
 }
 
 /*
+ * Safe area support for iOS notch / Dynamic Island on standalone PWA.
+ * On Android / desktop browsers, env(safe-area-inset-top) is 0px, maintaining standard 16px padding.
+ */
+header {
+  padding-top: calc(16px + env(safe-area-inset-top, 0px)) !important;
+}
+
+/*
  * scroll-area: the main scrollable region between header and bottom nav.
  * Bottom padding = nav height (64px) + iOS home indicator safe area.
  * Falls back to plain 80px on Android / older iOS.
